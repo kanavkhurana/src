@@ -2,10 +2,12 @@ public class BidWithItemsWrapper implements Comparable{
 
     public Bid__c bid{ get; set; }
     public Item__c item { get; set;}
+    public Integer index{get;set;}
 
-    public BidWithItemsWrapper(Bid__c b, Item__c i){
+    public BidWithItemsWrapper(Bid__c b, Item__c i, Integer index){
         bid = b;
         item = i;
+        this.index = index;
        
     }
 
