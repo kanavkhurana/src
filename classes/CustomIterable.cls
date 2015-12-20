@@ -11,7 +11,6 @@ global class CustomIterable implements Iterator<list<BidWithItemsWrapper>>
    Integer totalNumberOfPages{get;set;}
    Integer currentPage{get;set;}
 
-
    public CustomIterable(List<BidWithItemsWrapper> lstAccWr)
    {
        ItemList = new list<BidWithItemsWrapper >(); 
@@ -21,14 +20,18 @@ global class CustomIterable implements Iterator<list<BidWithItemsWrapper>>
        
        ItemList = lstAccWr;
        ItemListComplete = ItemList;
-       
+       Integer index = 1;
+
+       //Create Category Map and populate index
        for(BidWithItemsWrapper bwi : itemList )
         {
+            bwi.index = index++;
             //itemCategories.add(item.Category__c);
             if(categoryItemMap.containsKey(bwi.Item.Category__c)){
                 List<BidWithItemsWrapper> bwiListForACategory = categoryItemMap.get(bwi.item.Category__c);
                 bwiListForACategory.add(bwi);
                 categoryItemMap.put(bwi.item.Category__c, bwiListForACategory);
+
             }
             else{
                 List<BidWithItemsWrapper> bwiListForACategory = new List<BidWithItemsWrapper>();
@@ -228,7 +231,5 @@ public list<BidWithItemsWrapper > previous(){
         
        //Reset the Pointer 
        pointer = 0;
-       
    } 
-   
 }

@@ -44,7 +44,6 @@ public with sharing class CustomPaginationDemo
         itemIdsToProcess = new Set<Id>();
         itemIdBWIMap = new Map<Id, BidWithItemsWrapper>();
 
-        Integer index = 1;
 
         if(sc.getId() != null){
 
@@ -59,7 +58,7 @@ public with sharing class CustomPaginationDemo
 
             for(Bid__c bid : donation.Bids__r)
             {
-                BidWithItemsWrapper bwi = new BidWithItemsWrapper(bid,bid.Item__r, index++);
+                BidWithItemsWrapper bwi = new BidWithItemsWrapper(bid,bid.Item__r, 0);
                 lstWrapper.add(bwi);
                 itemIdBWIMap.put(bid.Item__c, bwi);
 
@@ -87,7 +86,7 @@ public with sharing class CustomPaginationDemo
 
         for(Item__c item : itemList )
         {
-            BidWithItemsWrapper bwi = new BidWithItemsWrapper(new Bid__c(Amount__c = 0.00),item, index++);
+            BidWithItemsWrapper bwi = new BidWithItemsWrapper(new Bid__c(Amount__c = 0.00),item, 0);
             lstWrapper.add(bwi);
             itemIdBWIMap.put(item.Id, bwi);
             itemCategories.add(item.Category__c);
@@ -97,6 +96,10 @@ public with sharing class CustomPaginationDemo
         //KK: Sorting to be done on the basis of Minimum Bid
         lstWrapper.sort();
 
+        //Index to be populated
+        //for(BidWithItemsWrapper bwi : lstWrapper){
+        //    bwi.index = index++;
+        //}
         system.debug('lstWrapper: ' + lstWrapper);
 
         obj = new CustomIterable (lstWrapper); 
@@ -110,248 +113,221 @@ public with sharing class CustomPaginationDemo
 
         system.debug('Selected Item Id: ' + processedItemId);
         itemIdsToProcess.add(processedItemId);
-        //system.debug('Selected Bid Amount: ' + processedBidAmount);
 
-        //Segregate change into deletion, update and insertion
-        /*if(bwi.bid.Id != NULL){
-                if(bwi.bid.Amount__c == 0.00){
-                    bidsToDelete.add(bwi.bid);
-                }
-                else{
-                    bidToUpsert.Id = bwi.bid.Id;
-                    bidsToUpsert.add(bidToUpsert);
-                }
-             }
-             else{
-                if(bwi.bid.Amount__c != 0.00){
-                    bidsToUpsert.add(bidToUpsert);
-                }
-            }*/
+    }
+    public Integer getCurrentPage(){
+        return obj.getCurrentPage();
+    }
+    public Integer getTotalNumberOfPages(){
+        return Integer.valueOf(obj.getTotalNumberOfPages());
+    }
 
+
+    public void populateCategoryTotalMap(){
+
+      Decimal categoryTotal = 0.0;
+      categoryTotalMap = new Map<String, Decimal>();
+
+      system.debug('obj.categoryItemMap: ' + obj.categoryItemMap);
+
+      for(String category : obj.categoryItemMap.keySet()){
+
+        categoryTotal = 0.0;
+
+        system.debug('browsing category: ' + category);
+
+        for(BidWithItemsWrapper bwi : obj.categoryItemMap.get(category)){
+
+            system.debug('browsing bwi: ' + bwi);
+
+            categoryTotal += bwi.bid.Amount__c;
         }
-        public Integer getCurrentPage(){
-            return obj.getCurrentPage();
-        }
-        public Integer getTotalNumberOfPages(){
-            return Integer.valueOf(obj.getTotalNumberOfPages());
-        }
-
-
-        public void populateCategoryTotalMap(){
-
-          Decimal categoryTotal = 0.0;
-          categoryTotalMap = new Map<String, Decimal>();
-
-          system.debug('obj.categoryItemMap: ' + obj.categoryItemMap);
-
-          for(String category : obj.categoryItemMap.keySet()){
-
-            categoryTotal = 0.0;
-
-            system.debug('browsing category: ' + category);
-
-            for(BidWithItemsWrapper bwi : obj.categoryItemMap.get(category)){
-
-                system.debug('browsing bwi: ' + bwi);
-
-                categoryTotal += bwi.bid.Amount__c;
-            }
 
             //Only consider Category if Total is > 0
-            if(categoryTotal > 0){
-                categoryTotalMap.put(category, categoryTotal);
-            }
-
+        if(categoryTotal > 0){
+            categoryTotalMap.put(category, categoryTotal);
         }
-
     }
+}
 
     //KK:Chart loading on page load - but not refreshing as of now
-    public void refreshPieData() {
-        populateCategoryTotalMap();
-        system.debug('categoryTotalMap: ' + categoryTotalMap);
+public void refreshPieData() {
+    populateCategoryTotalMap();
+    system.debug('categoryTotalMap: ' + categoryTotalMap);
 
-        pieData = new List<PieWedgeData>();
+    pieData = new List<PieWedgeData>();
 
-        for(String category :  categoryTotalMap.keySet()){
-            pieData.add(new PieWedgeData(category, (Integer)categoryTotalMap.get(category)));
-        } 
+    for(String category :  categoryTotalMap.keySet()){
+        pieData.add(new PieWedgeData(category, (Integer)categoryTotalMap.get(category)));
+    } 
+}
 
-        /*pieData.add(new PieWedgeData('Jan', 30));
-        pieData.add(new PieWedgeData('Feb', 15));
-        pieData.add(new PieWedgeData('Mar', 10));
-        pieData.add(new PieWedgeData('Apr', 20));
-        pieData.add(new PieWedgeData('May', 20));
-        pieData.add(new PieWedgeData('Jun', 5));
-        */
-        //return pieData;
-    }
-    public Boolean isNotFirst {
-        get 
-        {
-            return obj.isNotFirst();
-        }
-        set;
-    }
-    
-    public Boolean hasPrevious {
-        get 
-        {
-            return obj.hasPrevious();
-        }
-        set;
-    }
-
-    public Boolean hasNext {
-        get 
-        {
-            return obj.hasNext();
-        }
-        set;
-    }
-
-    public Boolean isNotLast {
-        get 
-        {
-            return obj.isNotLast();
-        }
-        set;
-    }
-
-    public PageReference first() 
+public Boolean isNotFirst {
+    get 
     {
-        if(itemListValidated()){
-            lstSetController = obj.first();
-            refreshPieData();
-        }
-
-        return null;
-
-
+        return obj.isNotFirst();
     }
+    set;
+}
 
-    public PageReference previous() 
+public Boolean hasPrevious {
+    get 
     {
-        if(itemListValidated()){
-
-            lstSetController = obj.previous();
-            refreshPieData();
-        }
-
-        return null;
-
+        return obj.hasPrevious();
     }
+    set;
+}
 
-    public PageReference next() 
+public Boolean hasNext {
+    get 
     {
-
-        if(itemListValidated()){
-            lstSetController = obj.next();
-            refreshPieData();
-        }
-        return null;
-
+        return obj.hasNext();
     }
+    set;
+}
 
-    public PageReference last() 
+public Boolean isNotLast {
+    get 
     {
-        if(itemListValidated()){
+        return obj.isNotLast();
+    }
+    set;
+}
 
-            lstSetController = obj.last();
-            refreshPieData();
-        }
-        return null;
-
+public PageReference first() 
+{
+    if(itemListValidated()){
+        lstSetController = obj.first();
+        refreshPieData();
     }
 
-    public Boolean itemListValidated(){
+    return null;
+}
 
-        Boolean validation = TRUE;
+public PageReference previous() 
+{
+    if(itemListValidated()){
 
-        for(BidWithItemsWrapper bwiToValidate : lstSetController ){
-
-            if(bwiToValidate.bid.Amount__c == NULL){
-                bwiToValidate.bid.Amount__c.addError('You must enter a value');
-                validation = FALSE;
-                break;
-            }
-        }
-
-        return validation;
-
+        lstSetController = obj.previous();
+        refreshPieData();
     }
 
-    public Boolean donationValidated(){
+    return null;
 
-        Boolean validation = TRUE;
+}
 
-        if(donation.Donor__c == NULL){
-            donation.Donor__c.addError('You must enter a value');
+public PageReference next() 
+{
 
+    if(itemListValidated()){
+        lstSetController = obj.next();
+        refreshPieData();
+    }
+    return null;
+
+}
+
+public PageReference last() 
+{
+    if(itemListValidated()){
+
+        lstSetController = obj.last();
+        refreshPieData();
+    }
+    return null;
+
+}
+
+public Boolean itemListValidated(){
+
+    Boolean validation = TRUE;
+
+    for(BidWithItemsWrapper bwiToValidate : lstSetController ){
+
+        if(bwiToValidate.bid.Amount__c == NULL){
+            bwiToValidate.bid.Amount__c.addError('You must enter a value');
             validation = FALSE;
+            break;
         }
-        system.debug('donation status: ' + donation.Status__c);
-
-        if(donation.Status__c == NULL){
-            donation.Status__c.addError('You must enter a value');
-            validation = FALSE;
-        }
-
-        return validation;
-
     }
-    public List<SelectOption> getCategories(){
 
-        List<SelectOption> options = new List<SelectOption>();
-        if(itemCategories.size() == 0){
-            options.add(new SelectOption('No items to bid on','No items to bid on'));
+    return validation;
+
+}
+
+public Boolean donationValidated(){
+
+    Boolean validation = TRUE;
+
+    if(donation.Donor__c == NULL){
+        donation.Donor__c.addError('You must enter a value');
+
+        validation = FALSE;
+    }
+    system.debug('donation status: ' + donation.Status__c);
+
+    if(donation.Status__c == NULL){
+        donation.Status__c.addError('You must enter a value');
+        validation = FALSE;
+    }
+
+    return validation;
+
+}
+public List<SelectOption> getCategories(){
+
+    List<SelectOption> options = new List<SelectOption>();
+    if(itemCategories.size() == 0){
+        options.add(new SelectOption('No items to bid on','No items to bid on'));
                 //selectedCategory = 'No items to bid on';
 
+    }
+    else{
+
+        options.add(new SelectOption('--Any Type--','--Any Type--'));
+
+        for(String itemCategory : itemCategories){
+            options.add(new SelectOption(itemCategory,itemCategory));
         }
-        else{
 
-            options.add(new SelectOption('--Any Type--','--Any Type--'));
-
-            for(String itemCategory : itemCategories){
-                options.add(new SelectOption(itemCategory,itemCategory));
-            }
-            
             //selectedCategory = '--Any Type--';
-        }
-
-        return options;
-
     }
 
-    public PageReference filterList(){
+    return options;
 
-        system.debug('In filter List');
-        system.debug('selected Category: ' + selectedCategory);
+}
 
-        if(itemListValidated()){
+public PageReference filterList(){
 
-            obj.filterList(selectedCategory);
-            obj.recalculateTotalNumberOfPages();
+    system.debug('In filter List');
+    system.debug('selected Category: ' + selectedCategory);
 
-            system.debug('Calling next()');
-            next();   
-        }
+    if(itemListValidated()){
 
-        return null;
+        obj.filterList(selectedCategory);
+        obj.recalculateTotalNumberOfPages();
 
+        system.debug('Calling next()');
+        next();   
     }
 
-    public PageReference customSave()
-    {
-        Savepoint sp;
-        
-        if(itemListValidated() && donationValidated()){
+    return null;
+
+}
+
+public PageReference customSave()
+{
+    Savepoint sp;
+
+    if(itemListValidated() && donationValidated()){
 
         //try{
-            sp = Database.setSavepoint();
+        sp = Database.setSavepoint();
 
-        //Upsert donation
+        try{
+            //Upsert donation
             upsert donation;
+            
 
          //system.debug('lstWrapper: ' + lstWrapper);
          //system.debug('lstSetController: ' + lstSetController);
@@ -367,13 +343,13 @@ public with sharing class CustomPaginationDemo
          //Loop through lstWrapper and save entities
             for(Id itemIdToProcess : itemIdsToProcess){
 
-               BidWithItemsWrapper bwi = itemIdBWIMap.get(itemIdToProcess);
-               Bid__c bidToUpsert = new Bid__c();
-               bidToUpsert.Amount__c = bwi.bid.Amount__c;
-               bidToUpsert.Item__c = bwi.item.Id;
-               bidToUpsert.Donation__c = donation.Id;
+             BidWithItemsWrapper bwi = itemIdBWIMap.get(itemIdToProcess);
+             Bid__c bidToUpsert = new Bid__c();
+             bidToUpsert.Amount__c = bwi.bid.Amount__c;
+             bidToUpsert.Item__c = bwi.item.Id;
+             bidToUpsert.Donation__c = donation.Id;
 
-               if(bwi.bid.Id != NULL){
+             if(bwi.bid.Id != NULL){
                 if(bwi.bid.Amount__c == 0.00){
                     bidsToDelete.add(bwi.bid);
                 }
@@ -390,21 +366,19 @@ public with sharing class CustomPaginationDemo
 
         }   
 
-
         //delete bidsToDelete;
         //upsert bidsToUpsert;
         
-        Database.DeleteResult[] deletionResultList = Database.delete(bidsToDelete, true);
+        Database.DeleteResult[] deletionResultList = Database.delete(bidsToDelete, false);
 
-        Integer errorLocation = 0;
+        Integer counter = 0;
+        Boolean errorDuringDML = FALSE;
 
         // Iterate through each returned result
         for (Database.DeleteResult sr : deletionResultList) {
-            if (sr.isSuccess()) {
-            }
-            else {
-                BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToDelete.get(errorLocation).Item__c);
-                //Bid__c errorBid = bidsToDelete.get(errorLocation);
+            if (!sr.isSuccess()) {
+            
+                BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToDelete.get(counter).Item__c);
                 String errorMessage = '';
 
                 // Operation failed, so get all errors               
@@ -413,26 +387,28 @@ public with sharing class CustomPaginationDemo
                 }
 
                 //Display error message for particular record and specify row number on top of the page
-                ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR,'Deletion failure for row number ' +
+                ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR,'Deletion failure for original row number ' +
                   errorBWI.index + ' for item: '
                   + errorBWI.item.Name + ' -> ' + errorMessage)) ;
 
                 errorBWI.bid.Amount__c.addError('An error occurred');
-
-                errorLocation++;
+                errorDuringDML = TRUE;
             }
+            counter++;
+
         }
         
-        if(errorLocation == 0){
-            Database.UpsertResult[] upsertResultList = Database.upsert(bidsToUpsert, true);
+        if(!errorDuringDML){
+            counter = 0;
+
+            Database.UpsertResult[] upsertResultList = Database.upsert(bidsToUpsert, false);
+
+            system.debug('upsertResultList:' + upsertResultList);
 
             for (Database.UpsertResult sr : upsertResultList) {
 
-                if (sr.isSuccess()) {
-                }
-                else {
-                    BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToDelete.get(errorLocation).Item__c);
-                    //Bid__c errorBid = bidsToDelete.get(errorLocation);
+                if (!sr.isSuccess()) {
+                    BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToUpsert.get(counter).Item__c);
                     String errorMessage = '';
 
                     // Operation failed, so get all errors               
@@ -441,28 +417,39 @@ public with sharing class CustomPaginationDemo
                     }
 
                     //Display error message for particular record and specify row number on top of the page
-                    ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR,'Upsert failure for row number ' +
+                    ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR,'Upsert failure for original row number ' +
                       errorBWI.index + ' for item: '
                       + errorBWI.item.Name + ' -> ' + errorMessage)) ;
 
                     errorBWI.bid.Amount__c.addError('An error occurred');
-
-                    errorLocation++;
+                    errorDuringDML = TRUE;
                 }
+                counter++;
             }
         }
+        else{
+            Database.rollback(sp);
+            return null;
+        }
         
-        if(errorLocation == 0)
+        if(!errorDuringDML)
         {
             return new PageReference('/' + donation.Id);
         }
         else{
+            Database.rollback(sp);
             return null;
         }
     }
-    else{
+    catch(Exception ex){
+        ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR, ex.getMessage()));
+        Database.rollback(sp);
         return null;
     }
+}
+else{
+    return null;
+}
          //ApexPages.addMessage(new ApexPages.message(ApexPages.severity.INFO,'Insertion successful!'));
 
          //}
