@@ -1,0 +1,96 @@
+<!--KK: Speed of page - especially during page change to be improved -->
+<apex:page standardController="Donation__c" extensions="CustomPaginationDemo" showHeader="false" sidebar="false" title="Donation Wizard">
+    <apex:outputPanel rendered="{!newPage}">
+        <apex:sectionHeader title="Donation Wizard" subtitle="New Donation" />
+    </apex:outputPanel>
+    <apex:outputPanel rendered="{!NOT(newPage)}">
+        <apex:sectionHeader title="Donation Wizard" subtitle="{!donation.Name}" />
+    </apex:outputPanel>
+    <apex:pageMessages id="messages" />
+    <apex:form >
+        <apex:pageBlock id="ThePage" title="Donation Information">
+            <apex:pageBlockSection columns="2" title="Donation Details" collapsible="false">
+                <!-- KK: Can't use required = true as that would initiate client side checks, whereas we want server side checks
+          because there are some actions where this field is required and some where it is not -->
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Donor" />
+                    <apex:outputPanel >
+                        <div class="requiredInput">
+                            <div class="requiredBlock"></div>
+                            <apex:inputField value="{!donation.Donor__c}" id="donor" />
+                            <apex:message for="donor" />
+                        </div>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Status" />
+                    <apex:outputPanel >
+                        <div class="requiredInput">
+                            <div class="requiredBlock"></div>
+                            <apex:inputField value="{!donation.Status__c}" id="status" />
+                            <apex:message for="status" />
+                        </div>
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1" title="Bid Chart" collapsible="false">
+                <apex:actionStatus id="itemListLoading" 
+                    startText="Loading..." stopText=""/ >
+                    
+                <apex:outputPanel id="chartContainer">
+                    <apex:outputPanel id="chart" rendered="{!categoryTotalMapSize > 0}">
+                        <apex:chart height="300" width="400" data="{!pieData}" name="Bid Chart">
+                            <apex:pieSeries dataField="data" labelField="name" />
+                            <apex:legend position="right" />
+                        </apex:chart>
+                    </apex:outputPanel>
+                    <apex:outputPanel id="blankMessage" rendered="{!categoryTotalMapSize = 0}">
+                        <apex:pageMessage summary="No items have been bid on yet" severity="info" strength="1" />
+                    </apex:outputPanel>
+                </apex:outputPanel>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection title="Items" collapsible="false" columns="1">
+                <apex:selectList size="1" label="Category" value="{!selectedCategory}">
+                    <apex:selectOptions value="{!categories}" />
+                    <apex:actionSupport event="onchange" action="{!filterList}" rerender="itemList, chartContainer, messages" status="itemListLoading" />
+                </apex:selectList>
+               
+                <apex:outputPanel id="itemList">
+                    <apex:pageBlockTable value="{!lstSetController }" var="items">
+                        <apex:column headerValue="Amount">
+                            <!-- KK: Can't use required = true here. Reason specified above -->
+                            <!--<apex:outputLabel value="Status" />-->
+                            <apex:outputPanel >
+                                <div class="requiredInput">
+                                    <div class="requiredBlock"></div>
+                                    <apex:inputField value="{!items.bid.Amount__c}" id="amount" />
+                                    <apex:message for="amount" />
+                                </div>
+                            </apex:outputPanel>
+                        </apex:column>
+                        <apex:column headerValue="Name">
+                            <apex:outputLink value="/{!items.item.Id}" target="_blank">{!items.item.name}</apex:outputLink>
+                        </apex:column>
+                        <apex:column value="{!items.item.Minimum_Bid__c}" headerValue="Minimum Bid" />
+                        <apex:column value="{!items.item.Highest_Bid__c}" headerValue="Highest Bid" />
+                        <apex:column value="{!items.item.Category__c}" headerValue="Category" />
+                        <apex:column value="{!items.item.Closing_Date__c}" headerValue="Closing Date" />
+                    </apex:pageBlockTable>
+                    <!-- KK: Margin of buttons pending -->
+                    <!--<apex:outputPanel >-->
+                    <div align="center">
+                        <apex:commandButton status="itemListLoading" value="<<First" action="{!first}" rendered="{!isNotFirst}" reRender="itemList, chartContainer, messages" style="margin-left: 1 em;"  />
+                        <apex:commandButton status="itemListLoading" value="<Previous" action="{!previous}" rendered="{!hasPrevious}" reRender="itemList, chartContainer, messages" style="margin-left: 1 em;" /> Page {!currentPage} of {!totalNumberOfPages}
+                        <apex:commandButton status="itemListLoading" value="Next >" action="{!next}" rendered="{!hasNext}" reRender="itemList, chartContainer, messages" style="margin-left: 1 em;" />
+                        <apex:commandButton status="itemListLoading" value="Last >>" action="{!last}" rendered="{!isNotLast}" reRender="itemList, chartContainer, messages" style="margin-left: 1 em;" />
+                    </div>
+                </apex:outputPanel>
+                <!--</apex:actionStatus>-->
+            </apex:pageBlockSection>
+            <apex:pageBlockButtons location="top">
+                <apex:commandButton action="{!customSave}" value="Save" />
+                <apex:commandButton action="{!cancel}" value="Cancel" />
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

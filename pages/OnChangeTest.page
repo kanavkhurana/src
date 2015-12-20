@@ -1,0 +1,18 @@
+<apex:page controller="onChangeController">
+  
+  <apex:form >
+  <apex:pageblock id="thePage">
+  <apex:pageblockTable value="{!bids}" var="bid">
+      <apex:column >
+      <apex:inputField value="{!bid.Amount__c}">
+        <apex:actionSupport event="onchange" action="{!onChangeAction}" rerender="thePage">
+                   <apex:param name="bidId" value="{!bid.Item__c}" assignTo="{!itemId}"/>
+        </apex:actionSupport>
+
+        </apex:inputField>
+      </apex:column>
+
+  </apex:pageblockTable>
+  </apex:pageblock>
+  </apex:form>
+</apex:page>
