@@ -34,9 +34,7 @@
                 </apex:pageBlockSectionItem>
             </apex:pageBlockSection>
             <apex:pageBlockSection columns="1" title="Bid Chart" collapsible="false">
-                <apex:actionStatus id="itemListLoading" 
-                    startText="Loading..." stopText=""/ >
-                    
+                <apex:actionStatus id="itemListLoading" startText="Loading..." stopText="" />
                 <apex:outputPanel id="chartContainer">
                     <apex:outputPanel id="chart" rendered="{!categoryTotalMapSize > 0}">
                         <apex:chart height="300" width="400" data="{!pieData}" name="Bid Chart">
@@ -54,7 +52,6 @@
                     <apex:selectOptions value="{!categories}" />
                     <apex:actionSupport event="onchange" action="{!filterList}" rerender="itemList, chartContainer, messages" status="itemListLoading" />
                 </apex:selectList>
-               
                 <apex:outputPanel id="itemList">
                     <apex:pageBlockTable value="{!lstSetController }" var="items">
                         <apex:column headerValue="Amount">
@@ -63,7 +60,14 @@
                             <apex:outputPanel >
                                 <div class="requiredInput">
                                     <div class="requiredBlock"></div>
-                                    <apex:inputField value="{!items.bid.Amount__c}" id="amount" />
+                                    <apex:inputField value="{!items.bid.Amount__c}" id="amount">
+                                        <apex:actionSupport event="onchange" action="{!processBid}" rerender="itemList">
+                                            <apex:param name="itemId" value="{!items.item.Id}" assignTo="{!processedItemId}" />
+                                            <!--<apex:param name="bidAmount" value="{!items.bid.Amount__c}" assignTo="{!processedBidAmount}" />-->
+                                            
+                                        </apex:actionSupport>
+                                        
+                                    </apex:inputField>
                                     <apex:message for="amount" />
                                 </div>
                             </apex:outputPanel>
@@ -79,7 +83,7 @@
                     <!-- KK: Margin of buttons pending -->
                     <!--<apex:outputPanel >-->
                     <div align="center">
-                        <apex:commandButton status="itemListLoading" value="<<First" action="{!first}" rendered="{!isNotFirst}" reRender="itemList, chartContainer, messages" style="margin-left: 1 em;"  />
+                        <apex:commandButton status="itemListLoading" value="<<First" action="{!first}" rendered="{!isNotFirst}" reRender="itemList, chartContainer, messages" style="margin-left: 1 em;" />
                         <apex:commandButton status="itemListLoading" value="<Previous" action="{!previous}" rendered="{!hasPrevious}" reRender="itemList, chartContainer, messages" style="margin-left: 1 em;" /> Page {!currentPage} of {!totalNumberOfPages}
                         <apex:commandButton status="itemListLoading" value="Next >" action="{!next}" rendered="{!hasNext}" reRender="itemList, chartContainer, messages" style="margin-left: 1 em;" />
                         <apex:commandButton status="itemListLoading" value="Last >>" action="{!last}" rendered="{!isNotLast}" reRender="itemList, chartContainer, messages" style="margin-left: 1 em;" />
@@ -88,7 +92,7 @@
                 <!--</apex:actionStatus>-->
             </apex:pageBlockSection>
             <apex:pageBlockButtons location="top">
-                <apex:commandButton action="{!customSave}" value="Save" />
+                <apex:commandButton action="{!customSave}" value="Save" rerender="messages" />
                 <apex:commandButton action="{!cancel}" value="Cancel" />
             </apex:pageBlockButtons>
         </apex:pageBlock>

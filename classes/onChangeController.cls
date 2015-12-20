@@ -3,7 +3,7 @@ public class onChangeController{
 /*public string testString{get;set;}
 public String testInput{get;set;}*/
 public List<Bid__c> bids{get;set;}
-public Id itemId{get;set;}
+public Decimal bidAmount{get;set;}
 
 public onChangeController(){
 
@@ -16,7 +16,7 @@ bids.add(new Bid__c(Amount__c = 0.00, Item__c = 'a027A0000024WDH'));
 }
 public void onChangeAction(){
 
-system.debug('current bid has item: ' + itemId);
+system.debug('current bid has amount: ' + bidAmount);
 
 
 }

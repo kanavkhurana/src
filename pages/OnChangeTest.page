@@ -6,7 +6,7 @@
       <apex:column >
       <apex:inputField value="{!bid.Amount__c}">
         <apex:actionSupport event="onchange" action="{!onChangeAction}" rerender="thePage">
-                   <apex:param name="bidId" value="{!bid.Item__c}" assignTo="{!itemId}"/>
+                   <apex:param name="bidId" value="{!bid.Amount__c}" assignTo="{!bidAmount}"/>
         </apex:actionSupport>
 
         </apex:inputField>

@@ -25,6 +25,12 @@ public Donation__c donation{get;set;}
 public Map<String, Decimal> categoryTotalMap{get;set;}
 public Integer categoryTotalMapSize { get { return categoryTotalMap.size( ); } }
 public Boolean newPage{get;set;}
+public Id processedItemId{get;set;}
+public Set<Id> itemIdsToProcess{get;set;}
+public Map<Id,BidWithItemsWrapper> itemIdBWIMap{get;set;}
+
+//public Decimal processedBidAmount{get;set;}
+
 
 CustomIterable obj;
 
@@ -35,6 +41,7 @@ CustomIterable obj;
         lstSetController = new List< BidWithItemsWrapper >();
         itemCategories = new Set<String>();
         Set<Id> itemIdsAlreadyQueried = new Set<Id>();
+        itemIdsToProcess = new Set<Id>();
 
         if(sc.getId() != null){
         
@@ -48,7 +55,10 @@ CustomIterable obj;
 
         for(Bid__c bid : donation.Bids__r)
         {
-            lstWrapper.add(new BidWithItemsWrapper(bid,bid.Item__r));
+            BidWithItemsWrapper bwi = new BidWithItemsWrapper(bid,bid.Item__r);
+            lstWrapper.add(bwi);
+            itemIdBWIMap.put(bid.Item__c, bwi);
+
             itemCategories.add(bid.Item__r.Category__c);
             itemIdsAlreadyQueried.add(bid.Item__c);
         }
@@ -73,8 +83,9 @@ CustomIterable obj;
 
         for(Item__c item : itemList )
         {
-            lstWrapper.add(new BidWithItemsWrapper(new Bid__c(Amount__c = 0.00),item));
-            
+            BidWithItemsWrapper bwi = new BidWithItemsWrapper(new Bid__c(Amount__c = 0.00),item);
+            lstWrapper.add(bwi);
+            itemIdBWIMap.put(item.Id, bwi);
             itemCategories.add(item.Category__c);
             
         }
@@ -91,7 +102,29 @@ CustomIterable obj;
         next();
        
     }
+    public void processBid(){
 
+        system.debug('Selected Item Id: ' + processedItemId);
+        itemIdsToProcess.add(processedItemId);
+        //system.debug('Selected Bid Amount: ' + processedBidAmount);
+
+        //Segregate change into deletion, update and insertion
+        /*if(bwi.bid.Id != NULL){
+                if(bwi.bid.Amount__c == 0.00){
+                    bidsToDelete.add(bwi.bid);
+                }
+                else{
+                    bidToUpsert.Id = bwi.bid.Id;
+                    bidsToUpsert.add(bidToUpsert);
+                }
+             }
+             else{
+                if(bwi.bid.Amount__c != 0.00){
+                    bidsToUpsert.add(bidToUpsert);
+                }
+             }*/
+             
+    }
     public Integer getCurrentPage(){
         return obj.getCurrentPage();
     }
@@ -319,16 +352,18 @@ CustomIterable obj;
          //system.debug('lstWrapper: ' + lstWrapper);
          //system.debug('lstSetController: ' + lstSetController);
 
-         system.debug('lstWrapper size: ' + lstWrapper.size());
-         system.debug('lstSetController size: ' + lstSetController.size());
+         //system.debug('lstWrapper size: ' + lstWrapper.size());
+         //system.debug('lstSetController size: ' + lstSetController.size());
          
          List<Bid__c> bidsToUpsert = new List<Bid__c>();
          List<Bid__c> bidsToDelete = new List<Bid__c>();
-
          
+         system.debug('itemIdsToProcess size: ' + itemIdsToProcess.size());
+
          //Loop through lstWrapper and save entities
-         for(BidWithItemsWrapper bwi : lstWrapper){
+         for(Id itemIdToProcess : itemIdsToProcess){
              
+             BidWithItemsWrapper bwi = itemIdBWIMap.get(itemIdToProcess);
              Bid__c bidToUpsert = new Bid__c();
              bidToUpsert.Amount__c = bwi.bid.Amount__c;
              bidToUpsert.Item__c = bwi.item.Id;
