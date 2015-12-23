@@ -10,8 +10,8 @@ Map<ID, Donation__c> donationsToUpdate = new Map<ID, Donation__c>();
 DonationCalculator.calculateTotalDonation(trigger.isDelete, trigger.isInsert,
                                           trigger.isUpdate, trigger.isUndelete, trigger.new, trigger.newmap, trigger.old, trigger.oldmap, donationsToUpdate);
 
-//ItemCalculator.calculateHighestBidForItems(trigger.isDelete, trigger.isInsert, 
-//                                           trigger.isUpdate, trigger.isUndelete, trigger.new, trigger.newmap, trigger.old, trigger.oldmap, itemsToUpdate);
+ItemCalculator.calculateHighestBidForItems(trigger.isDelete, trigger.isInsert, 
+                                           trigger.isUpdate, trigger.isUndelete, trigger.new, trigger.newmap, trigger.old, trigger.oldmap, itemsToUpdate);
 
 if(itemsToUpdate.size()>0) update itemsToUpdate.values();
 if(donationsToUpdate.size()>0) update donationsToUpdate.values();

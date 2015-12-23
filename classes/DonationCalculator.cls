@@ -1,3 +1,5 @@
+//KK: Any additional error handling to be done?
+
 public class DonationCalculator{
 
 
@@ -29,6 +31,7 @@ public class DonationCalculator{
                 }*/
                 Bid__c oldBid = oldMap.get(newBid.Id);
 
+                //Checking if Donation lookup has changed
                 if(newBid.Donation__c != oldBid.Donation__c){
                     if(oldBid.Donation__c != NULL){
                         donationIds.add(oldBid.Donation__c);
@@ -37,12 +40,16 @@ public class DonationCalculator{
                         donationIds.add(newBid.Donation__c);
                     }
                 }
+                //Checking if Amount has changed
+                else if(newBid.Amount__c != oldBid.Amount__c){
+                    donationIds.add(newBid.Donation__c);
+                }
             }
         }
         else if(isDelete){
 
             for(Bid__c oldBid: oldList){
-               
+
                 if(oldBid.Donation__c != NULL){
                     donationIds.add(oldBid.Donation__c);
                 }
