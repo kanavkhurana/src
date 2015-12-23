@@ -1,7 +1,23 @@
 //KK: Any recursion cases that need to be checked?
+//KK: To check if Donation lookup has changed? To avoid One donation having more than one bids for the same item?
 
 trigger BidTrigger on Bid__c (after insert, after update, after delete, after undelete) {
 
+Map<ID, Item__c> itemsToUpdate = new Map<ID, Item__c>();
+Map<ID, Donation__c> donationsToUpdate = new Map<ID, Donation__c>();
+
+
+DonationCalculator.calculateTotalDonation(trigger.isDelete, trigger.isInsert,
+                                          trigger.isUpdate, trigger.isUndelete, trigger.new, trigger.newmap, trigger.old, trigger.oldmap, donationsToUpdate);
+
+//ItemCalculator.calculateHighestBidForItems(trigger.isDelete, trigger.isInsert, 
+//                                           trigger.isUpdate, trigger.isUndelete, trigger.new, trigger.newmap, trigger.old, trigger.oldmap, itemsToUpdate);
+
+if(itemsToUpdate.size()>0) update itemsToUpdate.values();
+if(donationsToUpdate.size()>0) update donationsToUpdate.values();
+
+}
+/*
 Set<Id> itemIds = new Set<Id>();
 Set<Id> donationIds = new Set<Id>();
 
@@ -21,7 +37,6 @@ for(Bid__c bid : Trigger.New){
 }
 else if(Trigger.isUpdate){
     
-    //KK: To check if Donation lookup has changed? To avoid One donation having more than one bids for the same item?
     for(Bid__c bid : Trigger.New){
 
         if(bid.Item__c != NULL){
@@ -63,3 +78,5 @@ ItemCalculator.calculateHighestBidForItems(itemIds);
 DonationCalculator.calculateTotalDonation(donationIds);
 
 }
+
+*/

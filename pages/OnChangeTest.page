@@ -1,25 +1,16 @@
-<apex:page controller="onChangeController" >
-
-  <apex:form >
-
-  <apex:pageblock id="thePage" title="Test">
-  <apex:pageblockTable value="{!bids}" var="bid">
-
-      <apex:column >
-
-      <apex:inputField value="{!bid.bid.Amount__c}"  >
-        <apex:actionSupport event="onfocus" reRender="none" action="{!dummyAction}" >
-                   <apex:param name="varAssignment" value="{!bid.index}" assignTo="{!bidIndex}"/>
-        </apex:actionSupport>
-    
-        </apex:inputField>
-        
-      </apex:column>
-        </apex:pageblockTable>
-
-      
-  </apex:pageblock>
-          <apex:commandButton value="Submit"  action="{!submit}" / >
-
-  </apex:form>
+<apex:page controller="onChangeController">
+    <apex:form >
+        <apex:pageblock id="thePage" title="Test">
+            <apex:pageblockTable value="{!bids}" var="bid">
+                <apex:column >
+                    <apex:inputField value="{!bid.bid.Amount__c}">
+                        <apex:actionSupport event="onchange" reRender="thePage" action="{!dummyAction}" >
+                            <apex:param name="varAssignment" value="{!bid.index}" assignTo="{!bidIndex}" />
+                        </apex:actionSupport>
+                    </apex:inputField>
+                </apex:column>
+            </apex:pageblockTable>
+        </apex:pageblock>
+        <apex:commandButton value="Submit" action="{!submit}" />
+    </apex:form>
 </apex:page>
