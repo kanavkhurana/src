@@ -43,7 +43,7 @@ public class BidManager{
       Boolean isUpdate, Boolean isUndelete, Boolean isBefore, Boolean isAfter, List<Bid__c> newList, Map<Id, Bid__c> newMap, 
       List<Bid__c> oldList, Map<Id, Bid__c> oldMap, Map<Id, Item__c> itemsToUpdate){
 
-        if(isBefore && isInsert){
+        /*if(isBefore && isInsert){
            system.debug('executing a before insert');
 
            Set<Id> itemIds = new Set<Id>();
@@ -97,22 +97,26 @@ public class BidManager{
             }
         }
     }
-}
-else if(isAfter && isInsert){
+}*/
+//else
+    /*
+    if(isAfter && isInsert){
     system.debug('executing an after insert');
+
+   system.debug('itemIdHighestBidMap size: ' + itemIdHighestBidMap.size());
 
    for(Id itemId : itemIdHighestBidMap.keySet()){
     itemsToUpdate.put(itemId, new Item__c(Id = itemId, Highest_Bid__c = itemIdHighestBidMap.get(itemId)));
 }
 
 }
-
+*/
 //Called for update, delete and undelete
-else{
-
+//else{
+//Called for all events
     Set<Id> itemIds = new Set<Id>();
 
-    if(isUndelete){
+    if(isInsert || isUndelete){
         system.debug('executing an undelete');
 
         for(Bid__c newBid : newList){
@@ -181,10 +185,13 @@ else{
     for(Id itemId : itemHighestBidInitialMap.keySet()){
         itemsToUpdate.put(itemId, new Item__c(Id = itemId, Highest_Bid__c = itemHighestBidInitialMap.get(itemId)));
     }
+//}
+
+    system.debug('itemsToUpdate.size(): ' + itemsToUpdate.size());
+    system.debug('itemsToUpdate map: ' + itemsToUpdate);
 
     if(itemsToUpdate.size()>0) update itemsToUpdate.values();
 
-}
 }
 
 public static void calculateTotalDonation(Boolean isDelete, Boolean isInsert,
@@ -261,6 +268,7 @@ public static void calculateTotalDonation(Boolean isDelete, Boolean isInsert,
         for(Id donationId : donationTotalInitialMap.keySet()){
             donationsToUpdate.put(donationId, new Donation__c(Id = donationId, Total_Donation__c = donationTotalInitialMap.get(donationId)));
         }
+        system.debug('donationsToUpdate map: ' + donationsToUpdate);
 
         if(donationsToUpdate.size()>0) update donationsToUpdate.values();
     }
