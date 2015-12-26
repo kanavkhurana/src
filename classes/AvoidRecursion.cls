@@ -1,9 +1,9 @@
 public Class AvoidRecursion{
-    private static boolean beforeFirstRun = true;
-    private static boolean afterFirstRun = true;
+    //private static boolean beforeFirstRun = true;
+    //private static boolean afterFirstRun = true;
+    public static boolean alreadyRunning = false;
     public static Integer triggerCounter = 0;
-    
-    public static boolean isBeforeFirstRun(){
+    /*public static boolean isBeforeFirstRun(){
     if(beforeFirstRun){
       beforeFirstRun = false;
       return true;
@@ -19,4 +19,5 @@ public Class AvoidRecursion{
         return afterFirstRun;
     }
     }
+    */
 }
