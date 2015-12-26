@@ -7,6 +7,9 @@ public class BidManager{
       Boolean isUpdate, Boolean isUndelete, Boolean isBefore, Boolean isAfter, List<Bid__c> newList, Map<Id, Bid__c> newMap, 
       List<Bid__c> oldList, Map<Id, Bid__c> oldMap, Map<Id, Donation__c> donationsToUpdate, Map<Id, Item__c> itemsToUpdate){
 
+        system.debug('running chunk no. ' + AvoidRecursion.triggerCounter++);
+        system.debug('Trigger New size: ' + newList.size()); 
+        
         if(isBefore){
 
             system.debug('in a before trigger');
@@ -27,6 +30,7 @@ public class BidManager{
 
             if(AvoidRecursion.isAfterFirstRun())
             {
+                //If Item updates fail, the Bid records to be 
                 calculateHighestBidForItems(isDelete, isInsert,
                   isUpdate, isUndelete, isBefore, isAfter,newList,newMap, 
                   oldList,oldMap,itemsToUpdate);
@@ -83,13 +87,13 @@ public class BidManager{
 
         if(itemIdHighestBidMap.containsKey(newBid.Item__c)){
             if(newBid.Amount__c < itemIdHighestBidMap.get(newBid.Item__c)){
-                newBid.addError('You must bid higher than the item\'s highest Bid.');
+                newBid.addError(System.Label.BidError);
             }
             else if(newBid.Amount__c == itemIdHighestBidMap.get(newBid.Item__c)){
                 
                 //Check if already covered same bid amount before
                 if(itemIdsAlreadyCovered.contains(newBid.Item__c)){
-                    newBid.addError('You must bid higher than the item\'s highest Bid.');
+                    newBid.addError(System.Label.BidError);
                 }
                 else{
                     itemIdsAlreadyCovered.add(newBid.Item__c);
@@ -121,7 +125,7 @@ public class BidManager{
 
         for(Bid__c newBid : newList){
 
-            if(newBid.Item__c != NULL){
+            if(newBid.Item__c != NULL && newBid.Amount__c != NULL){
                 itemIds.add(newBid.Item__c);
             }
         }
@@ -156,7 +160,7 @@ public class BidManager{
 
         system.debug('executing a delete');
         for(Bid__c oldBid: oldList){
-            if(oldBid.Item__c != NULL){
+            if(oldBid.Item__c != NULL && oldBid.Amount__c != NULL){
                 itemIds.add(oldBid.Item__c);
             }
         }
@@ -205,7 +209,7 @@ public static void calculateTotalDonation(Boolean isDelete, Boolean isInsert,
         system.debug('executing insert or undelete');
         for(Bid__c newBid : newList){
 
-            if(newBid.Donation__c != NULL){
+            if(newBid.Donation__c != NULL && newBid.Amount__c != NULL){
                 donationIds.add(newBid.Donation__c);
             }
         }
@@ -239,7 +243,7 @@ public static void calculateTotalDonation(Boolean isDelete, Boolean isInsert,
 
             for(Bid__c oldBid: oldList){
 
-                if(oldBid.Donation__c != NULL){
+                if(oldBid.Donation__c != NULL && oldBid.Amount__c != NULL){
                     donationIds.add(oldBid.Donation__c);
                 }
             }

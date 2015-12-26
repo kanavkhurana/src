@@ -245,7 +245,7 @@ public Boolean itemListValidated(){
     for(BidWithItemsWrapper bwiToValidate : lstSetController ){
 
         if(bwiToValidate.bid.Amount__c == NULL){
-            bwiToValidate.bid.Amount__c.addError('You must enter a value');
+            bwiToValidate.bid.Amount__c.addError(System.Label.ValueRequired);
             validation = FALSE;
             break;
         }
@@ -260,14 +260,14 @@ public Boolean donationValidated(){
     Boolean validation = TRUE;
 
     if(donation.Donor__c == NULL){
-        donation.Donor__c.addError('You must enter a value');
+        donation.Donor__c.addError(System.Label.ValueRequired);
 
         validation = FALSE;
     }
     system.debug('donation status: ' + donation.Status__c);
 
     if(donation.Status__c == NULL){
-        donation.Status__c.addError('You must enter a value');
+        donation.Status__c.addError(System.Label.ValueRequired);
         validation = FALSE;
     }
 
@@ -278,13 +278,13 @@ public List<SelectOption> getCategories(){
 
     List<SelectOption> options = new List<SelectOption>();
     if(itemCategories.size() == 0){
-        options.add(new SelectOption('No items to bid on','No items to bid on'));
+        options.add(new SelectOption(System.Label.NoItemsToBid,System.Label.NoItemsToBid));
                 //selectedCategory = 'No items to bid on';
 
     }
     else{
 
-        options.add(new SelectOption('--Any Type--','--Any Type--'));
+        options.add(new SelectOption(System.Label.AllCategories, System.Label.AllCategories));
 
         for(String itemCategory : itemCategories){
             options.add(new SelectOption(itemCategory,itemCategory));
@@ -387,11 +387,11 @@ public PageReference customSave()
                 }
 
                 //Display error message for particular record and specify row number on top of the page
-                ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR,'Deletion failure for original row number ' +
-                  errorBWI.index + ' for item: '
+                ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR, System.Label.DeleteFailure_1 +
+                  errorBWI.index + System.Label.DeleteFailure_2
                   + errorBWI.item.Name + ' -> ' + errorMessage)) ;
 
-                errorBWI.bid.Amount__c.addError('An error occurred');
+                errorBWI.bid.Amount__c.addError(System.Label.GenericError);
                 errorDuringDML = TRUE;
             }
             counter++;
@@ -417,11 +417,11 @@ public PageReference customSave()
                     }
 
                     //Display error message for particular record and specify row number on top of the page
-                    ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR,'Upsert failure for original row number ' +
-                      errorBWI.index + ' for item: '
+                    ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR, System.Label.UpsertFailure_1 +
+                      errorBWI.index + System.Label.UpsertFailure_2
                       + errorBWI.item.Name + ' -> ' + errorMessage)) ;
 
-                    errorBWI.bid.Amount__c.addError('An error occurred');
+                    errorBWI.bid.Amount__c.addError(System.Label.GenericError);
                     errorDuringDML = TRUE;
                 }
                 counter++;

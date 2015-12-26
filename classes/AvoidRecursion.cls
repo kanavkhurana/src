@@ -1,7 +1,8 @@
 public Class AvoidRecursion{
     private static boolean beforeFirstRun = true;
     private static boolean afterFirstRun = true;
-
+    public static Integer triggerCounter = 0;
+    
     public static boolean isBeforeFirstRun(){
     if(beforeFirstRun){
       beforeFirstRun = false;

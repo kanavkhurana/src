@@ -216,7 +216,7 @@ public list<BidWithItemsWrapper > previous(){
        
        system.debug('selected filter: ' + filter);
        system.debug('categoryItemMap: ' + categoryItemMap);
-       if(filter == '--Any Type--'){
+       if(filter == System.Label.AllCategories){
        ItemList = ItemListComplete;
        
        }
