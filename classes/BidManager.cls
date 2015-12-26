@@ -71,6 +71,7 @@ public static void calculateHighestBidForItems(Boolean isDelete, Boolean isInser
   List<Bid__c> oldList, Map<Id, Bid__c> oldMap, Map<Id, Item__c> itemsToUpdate){
 
     List<Bid__c> errorList = new List<Bid__c>();
+    Map<Id, Item__c> matchingItems = new Map<Id, Item__c>();
 
     if(isBefore && isInsert){
        system.debug('executing a before insert');
@@ -83,12 +84,15 @@ public static void calculateHighestBidForItems(Boolean isDelete, Boolean isInser
         itemIds.add(newBid.Item__c);
     }
 
-           //Query list of items
-    Map<Id, Item__c> matchingItems = new Map<Id, Item__c>([SELECT Minimum_Bid__c, Highest_Bid__c
+    if(itemIds.size() > 0){
+    //Query list of items
+    matchingItems = new Map<Id, Item__c>([SELECT Minimum_Bid__c, Highest_Bid__c
       FROM Item__c
       WHERE Id IN: itemIds]);
-    itemIdHighestBidMap = new Map<Id, Decimal>();
+    }
 
+    itemIdHighestBidMap = new Map<Id, Decimal>();
+    
         //loop 1 and create map of itemid > highest bid (integer)
     for(Bid__c newBid : newList)
     {
@@ -222,12 +226,18 @@ else{
     //Initialize a Map for all items in itemIds with Highest Bid = 0 
     Map<Id, Decimal> itemHighestBidInitialMap = new Map<Id, Decimal>();
     Map<Id, Decimal> itemHighestBidMap = new Map<Id, Decimal>();
-
+    List<AggregateResult> itemARList = new List<AggregateResult>();
+    
     for(Id itemId : itemIds){
         itemHighestBidInitialMap.put(itemId, 0);
     }
 
-    List<AggregateResult> itemARList = [SELECT Item__c, MAX(Amount__c) highestBid FROM Bid__c WHERE Item__c IN: itemIds GROUP BY Item__c];
+    if(itemIds.size()>0){
+    itemARList = [SELECT Item__c, MAX(Amount__c) highestBid
+                                        FROM Bid__c WHERE
+                                        Item__c IN: itemIds
+                                        GROUP BY Item__c];
+    }
     system.debug('itemARList: ' + itemARList);
 
     //Create a map from the itemARList
@@ -320,12 +330,18 @@ public static void calculateTotalDonation(Boolean isDelete, Boolean isInsert,
         //Initialize a Map for all items in itemIds with Highest Bid = 0 
     Map<Id, Decimal> donationTotalInitialMap = new Map<Id, Decimal>();
     Map<Id, Decimal> donationTotalMap = new Map<Id, Decimal>();
-
+    List<AggregateResult> donationARList = new List<AggregateResult>();
+    
     for(Id donationId : donationIds){
         donationTotalInitialMap.put(donationId, 0);
     }
+    if(donationIds.size() > 0){
+    donationARList = [SELECT Donation__c, SUM(Amount__c) totalDonation
+                                            FROM Bid__c
+                                            WHERE Donation__c IN: donationIds
+                                            GROUP BY Donation__c];
+    }
 
-    List<AggregateResult> donationARList = [SELECT Donation__c, SUM(Amount__c) totalDonation FROM Bid__c WHERE Donation__c IN: donationIds GROUP BY Donation__c];
     system.debug('donationARList: ' + donationARList);
 
         //Create a map from the donationARList
