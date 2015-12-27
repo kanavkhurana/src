@@ -63,12 +63,13 @@ else if(isAfter){
 
         AvoidRecursion.AlreadyRunning = FALSE;
     }
-}
 
 //KK: Error condition to be checked for Item
-if(itemsToUpdate.size()>0) update itemsToUpdate.values();
+    if(itemsToUpdate.size()>0) update itemsToUpdate.values();
 //KK: Look at condition when donation DML fails
-if(donationsToUpdate.size()>0) update donationsToUpdate.values();
+    if(donationsToUpdate.size()>0) update donationsToUpdate.values();
+
+}
 
 }
 
@@ -80,21 +81,21 @@ public static void calculateHighestBidForItems(Boolean isDelete, Boolean isInser
     Map<Id, Item__c> matchingItems = new Map<Id, Item__c>();
 
     if(isBefore && isInsert){
-       system.debug('executing a before insert');
+     system.debug('executing a before insert');
 
-       Set<Id> itemIds = new Set<Id>();
-       Set<Id> itemIdsAlreadyCovered = new Set<Id>();
+     Set<Id> itemIds = new Set<Id>();
+     Set<Id> itemIdsAlreadyCovered = new Set<Id>();
 
            //Loop and get list of all items
-       for(Bid__c newBid : newList){
+     for(Bid__c newBid : newList){
         itemIds.add(newBid.Item__c);
     }
 
     if(itemIds.size() > 0){
     //Query list of items
-    matchingItems = new Map<Id, Item__c>([SELECT Minimum_Bid__c, Highest_Bid__c
-      FROM Item__c
-      WHERE Id IN: itemIds FOR UPDATE]);
+        matchingItems = new Map<Id, Item__c>([SELECT Minimum_Bid__c, Highest_Bid__c
+          FROM Item__c
+          WHERE Id IN: itemIds FOR UPDATE]);
     }
 
     itemIdHighestBidMap = new Map<Id, Decimal>();
@@ -108,8 +109,8 @@ public static void calculateHighestBidForItems(Boolean isDelete, Boolean isInser
         Decimal itemHighestBid = matchingItems.get(newBid.Item__c).Highest_Bid__c;
         Decimal highestBidForItem = 0.00;
         if(itemIdHighestBidMap.containsKey(newBid.Item__c)){
-         highestBidForItem = itemIdHighestBidMap.get(newBid.Item__c);
-     }
+           highestBidForItem = itemIdHighestBidMap.get(newBid.Item__c);
+       }
 
          /*if(itemHighestBid == NULL){
             if(newBid.Amount__c > )
@@ -161,14 +162,14 @@ public static void calculateHighestBidForItems(Boolean isDelete, Boolean isInser
     }
 }
 else if(isAfter && isInsert){
-   if(!errorsFoundInBeforeInsert){
-       system.debug('executing an after insert');
+ if(!errorsFoundInBeforeInsert){
+     system.debug('executing an after insert');
 
-       if(itemIdHighestBidMap != NULL){
-           system.debug('itemIdHighestBidMap size: ' + itemIdHighestBidMap.size());
-       }
+     if(itemIdHighestBidMap != NULL){
+         system.debug('itemIdHighestBidMap size: ' + itemIdHighestBidMap.size());
+     }
 
-       for(Id itemId : itemIdHighestBidMap.keySet()){
+     for(Id itemId : itemIdHighestBidMap.keySet()){
         itemsToUpdate.put(itemId, new Item__c(Id = itemId, Highest_Bid__c = itemIdHighestBidMap.get(itemId)));
     }
 }
@@ -246,25 +247,28 @@ else{
                                         Item__c IN: itemIds
                                         GROUP BY Item__c];
                                         */
-    relatedBidList = [SELECT Item__c, Amount__c
-                      FROM Bid__c
-                      WHERE Item__c IN: itemIds
-                      FOR UPDATE];
+                                        relatedBidList = [SELECT Item__c, Amount__c
+                                        FROM Bid__c
+                                        WHERE Item__c IN: itemIds
+                                        FOR UPDATE];
 
-    }
+                                    }
 
     //system.debug('itemARList: ' + itemARList);
-    system.debug('relatedBidList size: ' + relatedBidList.size());
+                                    system.debug('relatedBidList size: ' + relatedBidList.size());
 
     //Loop through relatedBidList and Find out Maximum Bid Amount for Each Item
-    for(Bid__c relatedBid : relatedBidList){
-        if(itemHighestBidInitialMap.containsKey(relatedBid.Item__c)){
-            Decimal itemHighestBid = itemHighestBidInitialMap.get(relatedBid.Item__c);
-            if(relatedBid.Amount__c > itemHighestBid){
-                itemHighestBidInitialMap.put(relatedBid.Item__c, relatedBid.Amount__c);
-            }
-        }
-    }
+                                    for(Bid__c relatedBid : relatedBidList){
+                                        if(itemHighestBidInitialMap.containsKey(relatedBid.Item__c)){
+                                            Decimal itemHighestBid = itemHighestBidInitialMap.get(relatedBid.Item__c);
+                                            if(itemHighestBid == NULL){
+                                                itemHighestBid = 0.00;
+                                            }
+                                            if(relatedBid.Amount__c > itemHighestBid){
+                                                itemHighestBidInitialMap.put(relatedBid.Item__c, relatedBid.Amount__c);
+                                            }
+                                        }
+                                    }
 
     //Create a map from the itemARList
     /*for(AggregateResult itemAR : itemARList){
@@ -366,22 +370,25 @@ public static void calculateTotalDonation(Boolean isDelete, Boolean isInsert,
                                             WHERE Donation__c IN: donationIds
                                             GROUP BY Donation__c FOR UPDATE];
                                             */
-    relatedBidList = [SELECT Donation__c, Amount__c
-                      FROM Bid__c
-                      WHERE Donation__c IN: donationIds
-                      FOR UPDATE];
-    }
+                                            relatedBidList = [SELECT Donation__c, Amount__c
+                                            FROM Bid__c
+                                            WHERE Donation__c IN: donationIds
+                                            FOR UPDATE];
+                                        }
 
     //system.debug('donationARList: ' + donationARList);
-    system.debug('relatedBidList size: ' + relatedBidList.size());
+                                        system.debug('relatedBidList size: ' + relatedBidList.size());
 
-    for(Bid__c relatedBid : relatedBidList){
-        if(donationTotalInitialMap.containsKey(relatedBid.Donation__c)){
-            Decimal donationTotalBid = donationTotalInitialMap.get(relatedBid.Donation__c);
-            donationTotalBid += relatedBid.Amount__c;
-            donationTotalInitialMap.put(relatedBid.Donation__c, donationTotalBid);
-        }
-    }
+                                        for(Bid__c relatedBid : relatedBidList){
+                                            if(donationTotalInitialMap.containsKey(relatedBid.Donation__c)){
+                                                Decimal donationTotalBid = donationTotalInitialMap.get(relatedBid.Donation__c);
+                                                if(donationTotalBid == NULL){
+                                                    donationTotalBid = 0.00;
+                                                }
+                                                donationTotalBid += relatedBid.Amount__c;
+                                                donationTotalInitialMap.put(relatedBid.Donation__c, donationTotalBid);
+                                            }
+                                        }
     //Create a map from the donationARList
     //for(AggregateResult donationAR : donationARList){
     //    donationTotalMap.put((Id)donationAR.get('Donation__c'), (Decimal)donationAR.get('totalDonation'));
@@ -389,10 +396,10 @@ public static void calculateTotalDonation(Boolean isDelete, Boolean isInsert,
 
     //donationTotalInitialMap.putAll(donationTotalMap);
 
-    for(Id donationId : donationTotalInitialMap.keySet()){
-        donationsToUpdate.put(donationId, new Donation__c(Id = donationId, Total_Donation__c = donationTotalInitialMap.get(donationId)));
-    }
-    system.debug('donationsToUpdate map: ' + donationsToUpdate);
+                                        for(Id donationId : donationTotalInitialMap.keySet()){
+                                            donationsToUpdate.put(donationId, new Donation__c(Id = donationId, Total_Donation__c = donationTotalInitialMap.get(donationId)));
+                                        }
+                                        system.debug('donationsToUpdate map: ' + donationsToUpdate);
 
-}
-}
+                                    }
+                                }
