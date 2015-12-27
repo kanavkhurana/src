@@ -1,7 +1,7 @@
 //KK: Look at naming conventions, class, variable and method renaming
 /*
 Assumptions:
-Each Donation should have only 1 Bid per Item
+Each Donation has only 1 Bid per Item
 
 */
 public with sharing class CustomPaginationDemo
@@ -30,9 +30,9 @@ public with sharing class CustomPaginationDemo
     public Map<String, Decimal> categoryTotalMap{get;set;}
     public Integer categoryTotalMapSize { get { return categoryTotalMap.size( ); } }
     public Boolean newPage{get;set;}
-    public Id processedItemId{get;set;}
-    public Set<Id> itemIdsToProcess{get;set;}
-    public Map<Id,BidWithItemsWrapper> itemIdBWIMap{get;set;}
+    //public Id processedItemId{get;set;}
+    //public Set<Id> itemIdsToProcess{get;set;}
+    //public Map<Id,BidWithItemsWrapper> itemIdBWIMap{get;set;}
 
 //public Decimal processedBidAmount{get;set;}
 
@@ -46,8 +46,8 @@ public with sharing class CustomPaginationDemo
         lstSetController = new List< BidWithItemsWrapper >();
         itemCategories = new Set<String>();
         Set<Id> itemIdsAlreadyQueried = new Set<Id>();
-        itemIdsToProcess = new Set<Id>();
-        itemIdBWIMap = new Map<Id, BidWithItemsWrapper>();
+        //itemIdsToProcess = new Set<Id>();
+        //itemIdBWIMap = new Map<Id, BidWithItemsWrapper>();
 
 
         if(sc.getId() != null){
@@ -63,9 +63,9 @@ public with sharing class CustomPaginationDemo
 
             for(Bid__c bid : donation.Bids__r)
             {
-                BidWithItemsWrapper bwi = new BidWithItemsWrapper(bid,bid.Item__r, 0);
+                BidWithItemsWrapper bwi = new BidWithItemsWrapper(bid,bid.Item__r);
                 lstWrapper.add(bwi);
-                itemIdBWIMap.put(bid.Item__c, bwi);
+                //itemIdBWIMap.put(bid.Item__c, bwi);
 
                 itemCategories.add(bid.Item__r.Category__c);
                 itemIdsAlreadyQueried.add(bid.Item__c);
@@ -94,9 +94,9 @@ public with sharing class CustomPaginationDemo
 
         for(Item__c item : itemList )
         {
-            BidWithItemsWrapper bwi = new BidWithItemsWrapper(new Bid__c(Amount__c = 0.00),item, 0);
+            BidWithItemsWrapper bwi = new BidWithItemsWrapper(new Bid__c(Amount__c = 0.00),item);
             lstWrapper.add(bwi);
-            itemIdBWIMap.put(item.Id, bwi);
+            //itemIdBWIMap.put(item.Id, bwi);
             itemCategories.add(item.Category__c);
             
         }
@@ -118,12 +118,13 @@ public with sharing class CustomPaginationDemo
         next();
 
     }
-    public void processBid(){
+    //Not working
+    /*public void processBid(){
 
         system.debug('Selected Item Id: ' + processedItemId);
         itemIdsToProcess.add(processedItemId);
 
-    }
+    }*/
     public Integer getCurrentPage(){
         return obj.getCurrentPage();
     }
@@ -253,6 +254,7 @@ public PageReference last()
 public Boolean itemListValidated(){
 
     Boolean validation = TRUE;
+    system.debug('lstSetController size: ' + lstSetController.size());
 
     for(BidWithItemsWrapper bwiToValidate : lstSetController ){
 
@@ -337,9 +339,10 @@ public PageReference customSave()
         sp = Database.setSavepoint();
 
         try{
+            
+            system.debug('upserting donation: ' + donation);
             //Upsert donation
             upsert donation;
-            
 
          //system.debug('lstWrapper: ' + lstWrapper);
          //system.debug('lstSetController: ' + lstSetController);
@@ -349,13 +352,19 @@ public PageReference customSave()
 
             List<Bid__c> bidsToUpsert = new List<Bid__c>();
             List<Bid__c> bidsToDelete = new List<Bid__c>();
-
-            system.debug('itemIdsToProcess size: ' + itemIdsToProcess.size());
+            Map<Integer, Integer> deleteIndexMainIndexMap = new Map<Integer, Integer>();
+            Map<Integer, Integer> upsertIndexMainIndexMap = new Map<Integer, Integer>();
+            
+            //system.debug('itemIdsToProcess size: ' + itemIdsToProcess.size());
 
          //Loop through lstWrapper and save entities
-            for(Id itemIdToProcess : itemIdsToProcess){
+            //for(Id itemIdToProcess : itemIdsToProcess){
+            Integer mainIndexCounter = 0;
+            Integer deleteIndexCounter = 0;
+            Integer upsertIndexCounter = 0;
+            for(BidWithItemsWrapper bwi: lstWrapper){
 
-             BidWithItemsWrapper bwi = itemIdBWIMap.get(itemIdToProcess);
+             //BidWithItemsWrapper bwi = itemIdBWIMap.get(itemIdToProcess);
              Bid__c bidToUpsert = new Bid__c();
              bidToUpsert.Amount__c = bwi.bid.Amount__c;
              bidToUpsert.Item__c = bwi.item.Id;
@@ -364,18 +373,25 @@ public PageReference customSave()
              if(bwi.bid.Id != NULL){
                 if(bwi.bid.Amount__c == 0.00){
                     bidsToDelete.add(bwi.bid);
+                    deleteIndexMainIndexMap.put(deleteIndexCounter, mainIndexCounter);
+                    deleteIndexCounter++;
                 }
                 else{
                     bidToUpsert.Id = bwi.bid.Id;
                     bidsToUpsert.add(bidToUpsert);
+                    upsertIndexMainIndexMap.put(upsertIndexCounter, mainIndexCounter);
+                    upsertIndexCounter++;
                 }
             }
             else{
                 if(bwi.bid.Amount__c != 0.00){
                     bidsToUpsert.add(bidToUpsert);
+                    upsertIndexMainIndexMap.put(upsertIndexCounter, mainIndexCounter);
+                    upsertIndexCounter++;
                 }
             }
 
+            mainIndexCounter++;
         }   
 
         //delete bidsToDelete;
@@ -392,7 +408,14 @@ public PageReference customSave()
             for (Database.DeleteResult sr : deletionResultList) {
                 if (!sr.isSuccess()) {
                 
-                    BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToDelete.get(counter).Item__c);
+                    //BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToDelete.get(counter).Item__c);
+                    Integer mainIndex = 0;
+                    
+                    if(deleteIndexMainIndexMap.containsKey(counter)){
+                        mainIndex = deleteIndexMainIndexMap.get(counter);
+                    }
+                    BidWithItemsWrapper errorBWI = lstWrapper.get(mainIndex);
+                    
                     String errorMessage = '';
 
                     // Operation failed, so get all errors               
@@ -402,7 +425,7 @@ public PageReference customSave()
 
                     //Display error message for particular record and specify row number on top of the page
                     ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR, System.Label.DeleteFailure_1 + ' ' + 
-                      errorBWI.index + ' ' + System.Label.DeleteFailure_2
+                      (mainIndex+1) + ' ' + System.Label.DeleteFailure_2
                       + errorBWI.item.Name + ' -> ' + errorMessage)) ;
 
                     errorBWI.bid.Amount__c.addError(System.Label.GenericError);
@@ -424,7 +447,14 @@ public PageReference customSave()
                 for (Database.UpsertResult sr : upsertResultList) {
 
                     if (!sr.isSuccess()) {
-                        BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToUpsert.get(counter).Item__c);
+                        Integer mainIndex = 0;
+                        
+                        if(upsertIndexMainIndexMap.containsKey(counter)){
+                            mainIndex = upsertIndexMainIndexMap.get(counter);
+                        }
+                        //BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToUpsert.get(counter).Item__c);
+                        BidWithItemsWrapper errorBWI = lstWrapper.get(mainIndex);
+
                         String errorMessage = '';
 
                         // Operation failed, so get all errors               
@@ -434,7 +464,7 @@ public PageReference customSave()
 
                         //Display error message for particular record and specify row number on top of the page
                         ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR, System.Label.UpsertFailure_1 + ' ' + 
-                          errorBWI.index + ' ' + System.Label.UpsertFailure_2
+                          (mainIndex+1) + ' ' + System.Label.UpsertFailure_2
                           + errorBWI.item.Name + ' -> ' + errorMessage)) ;
 
                         errorBWI.bid.Amount__c.addError(System.Label.GenericError);
@@ -446,21 +476,35 @@ public PageReference customSave()
         }
         else{
             Database.rollback(sp);
+            if(newPage){
+                donation.Id = null;
+            }
+
             return null;
         }
         
         if(!errorDuringDML)
         {
+            //system.debug('upserting donation: ' + donation);
+            //Upsert donation
+            //upsert donation;
+            
             return new PageReference('/' + donation.Id);
         }
         else{
             Database.rollback(sp);
+            if(newPage){
+                donation.Id = null;
+            }
             return null;
         }
     }
     catch(Exception ex){
         ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR, ex.getMessage()));
         Database.rollback(sp);
+        if(newPage){
+            donation.Id = null;
+        }
         return null;
     }
 }

@@ -65,10 +65,12 @@
                                     <apex:inputField value="{!items.bid.Amount__c}" id="amount">
                                         <!--<apex:actionSupport event="onchange" action="{!processBid}" rerender="itemList">-->
                                         <!--KK: Is this better ? or should we just compare old with new in a loop? --> 
-                                        <apex:actionSupport event="onfocus" action="{!processBid}" rerender="none">
+                                        <!--
+                                        <apex:actionSupport event="onfocus" action="{!processBid}" rerender="none" immediate="true">
                                         
                                             <apex:param name="itemId" value="{!items.item.Id}" assignTo="{!processedItemId}" />
                                         </apex:actionSupport>
+                                        -->
                                     </apex:inputField>
                                     <apex:message for="amount" />
                                 </div>

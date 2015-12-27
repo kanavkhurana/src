@@ -20,12 +20,12 @@ global class CustomIterable implements Iterator<list<BidWithItemsWrapper>>
        
        ItemList = lstAccWr;
        ItemListComplete = ItemList;
-       Integer index = 1;
+       //Integer index = 1;
 
-       //Create Category Map and populate index
+       //Create Category Map
        for(BidWithItemsWrapper bwi : itemList )
         {
-            bwi.index = index++;
+            //bwi.index = index++;
             //itemCategories.add(item.Category__c);
             if(categoryItemMap.containsKey(bwi.Item.Category__c)){
                 List<BidWithItemsWrapper> bwiListForACategory = categoryItemMap.get(bwi.item.Category__c);
