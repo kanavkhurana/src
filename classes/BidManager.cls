@@ -135,7 +135,7 @@ public static void calculateHighestBidForItems(Boolean isDelete, Boolean isInser
          //}
     }
 
-    for(Bid__c newBid : newList){
+    for(Bid__c newBid : newList){   
 
         if(itemIdHighestBidMap.containsKey(newBid.Item__c)){
             if(newBid.Amount__c < itemIdHighestBidMap.get(newBid.Item__c)){
@@ -264,8 +264,10 @@ else{
                                             if(itemHighestBid == NULL){
                                                 itemHighestBid = 0.00;
                                             }
-                                            if(relatedBid.Amount__c > itemHighestBid){
-                                                itemHighestBidInitialMap.put(relatedBid.Item__c, relatedBid.Amount__c);
+                                            if(relatedBid.Amount__c != NULL){
+                                                if(relatedBid.Amount__c > itemHighestBid){
+                                                    itemHighestBidInitialMap.put(relatedBid.Item__c, relatedBid.Amount__c);
+                                                }
                                             }
                                         }
                                     }
@@ -385,7 +387,9 @@ public static void calculateTotalDonation(Boolean isDelete, Boolean isInsert,
                                                 if(donationTotalBid == NULL){
                                                     donationTotalBid = 0.00;
                                                 }
-                                                donationTotalBid += relatedBid.Amount__c;
+                                                if(relatedBid.Amount__c != NULL){
+                                                    donationTotalBid += relatedBid.Amount__c;
+                                                }
                                                 donationTotalInitialMap.put(relatedBid.Donation__c, donationTotalBid);
                                             }
                                         }

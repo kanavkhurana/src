@@ -1,4 +1,9 @@
 //KK: Look at naming conventions, class, variable and method renaming
+/*
+Assumptions:
+Each Donation should have only 1 Bid per Item
+
+*/
 public with sharing class CustomPaginationDemo
 {
 
@@ -76,6 +81,7 @@ public with sharing class CustomPaginationDemo
             newPage = TRUE;
         }
         
+        system.debug('ready to fetch itemList');
         //Adding Items with Close Date >= Today
         //Excluding items that have already been added above
         itemList = [SELECT Name, Minimum_Bid__c, Highest_Bid__c, Category__c, Closing_Date__c
@@ -83,6 +89,8 @@ public with sharing class CustomPaginationDemo
         WHERE Closing_Date__c >=: Date.today()
         AND Id NOT IN: itemIdsAlreadyQueried
         ORDER BY Minimum_Bid__c];
+
+        system.debug('itemlist size: ' + itemList.size());
 
         for(Item__c item : itemList )
         {
@@ -93,6 +101,7 @@ public with sharing class CustomPaginationDemo
             
         }
 
+        system.debug('ready to sort');
         //KK: Sorting to be done on the basis of Minimum Bid
         lstWrapper.sort();
 
@@ -140,7 +149,9 @@ public with sharing class CustomPaginationDemo
 
             system.debug('browsing bwi: ' + bwi);
 
-            categoryTotal += bwi.bid.Amount__c;
+            if(bwi.bid.Amount__c != NULL){
+                categoryTotal += bwi.bid.Amount__c;
+            }
         }
 
             //Only consider Category if Total is > 0
@@ -219,6 +230,7 @@ public PageReference previous()
 public PageReference next() 
 {
 
+    system.debug('In controller > next');
     if(itemListValidated()){
         lstSetController = obj.next();
         refreshPieData();
@@ -369,46 +381,18 @@ public PageReference customSave()
         //delete bidsToDelete;
         //upsert bidsToUpsert;
         
-        Database.DeleteResult[] deletionResultList = Database.delete(bidsToDelete, false);
-
-        Integer counter = 0;
         Boolean errorDuringDML = FALSE;
+        Integer counter = 0;
 
-        // Iterate through each returned result
-        for (Database.DeleteResult sr : deletionResultList) {
-            if (!sr.isSuccess()) {
-            
-                BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToDelete.get(counter).Item__c);
-                String errorMessage = '';
+        if(!bidsToDelete.isEmpty()){
 
-                // Operation failed, so get all errors               
-                for(Database.Error err : sr.getErrors()) {                   
-                    errorMessage += err.getMessage();
-                }
-
-                //Display error message for particular record and specify row number on top of the page
-                ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR, System.Label.DeleteFailure_1 +
-                  errorBWI.index + System.Label.DeleteFailure_2
-                  + errorBWI.item.Name + ' -> ' + errorMessage)) ;
-
-                errorBWI.bid.Amount__c.addError(System.Label.GenericError);
-                errorDuringDML = TRUE;
-            }
-            counter++;
-
-        }
+            Database.DeleteResult[] deletionResultList = Database.delete(bidsToDelete, false);
         
-        if(!errorDuringDML){
-            counter = 0;
-
-            Database.UpsertResult[] upsertResultList = Database.upsert(bidsToUpsert, false);
-
-            system.debug('upsertResultList:' + upsertResultList);
-
-            for (Database.UpsertResult sr : upsertResultList) {
-
+            // Iterate through each returned result
+            for (Database.DeleteResult sr : deletionResultList) {
                 if (!sr.isSuccess()) {
-                    BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToUpsert.get(counter).Item__c);
+                
+                    BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToDelete.get(counter).Item__c);
                     String errorMessage = '';
 
                     // Operation failed, so get all errors               
@@ -417,14 +401,47 @@ public PageReference customSave()
                     }
 
                     //Display error message for particular record and specify row number on top of the page
-                    ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR, System.Label.UpsertFailure_1 +
-                      errorBWI.index + System.Label.UpsertFailure_2
+                    ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR, System.Label.DeleteFailure_1 + ' ' + 
+                      errorBWI.index + ' ' + System.Label.DeleteFailure_2
                       + errorBWI.item.Name + ' -> ' + errorMessage)) ;
 
                     errorBWI.bid.Amount__c.addError(System.Label.GenericError);
                     errorDuringDML = TRUE;
                 }
                 counter++;
+
+            }
+        }
+        
+        if(!errorDuringDML){
+            counter = 0;
+
+            if(!bidsToUpsert.isEmpty()){
+                Database.UpsertResult[] upsertResultList = Database.upsert(bidsToUpsert, false);
+
+                system.debug('upsertResultList:' + upsertResultList);
+
+                for (Database.UpsertResult sr : upsertResultList) {
+
+                    if (!sr.isSuccess()) {
+                        BidWithItemsWrapper errorBWI = itemIdBWIMap.get(bidsToUpsert.get(counter).Item__c);
+                        String errorMessage = '';
+
+                        // Operation failed, so get all errors               
+                        for(Database.Error err : sr.getErrors()) {                   
+                            errorMessage += err.getMessage();
+                        }
+
+                        //Display error message for particular record and specify row number on top of the page
+                        ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR, System.Label.UpsertFailure_1 + ' ' + 
+                          errorBWI.index + ' ' + System.Label.UpsertFailure_2
+                          + errorBWI.item.Name + ' -> ' + errorMessage)) ;
+
+                        errorBWI.bid.Amount__c.addError(System.Label.GenericError);
+                        errorDuringDML = TRUE;
+                    }
+                    counter++;
+                }
             }
         }
         else{
