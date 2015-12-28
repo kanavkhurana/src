@@ -3,6 +3,7 @@ public class BidManager{
 
     public static Map<Id, Decimal> itemIdHighestBidMap;
     public static Boolean errorsFoundInBeforeInsert = FALSE;
+    public static Boolean calculateItemIdHighestBidMap = TRUE;
 
     public static void dispatcher(Boolean isDelete, Boolean isInsert,
       Boolean isUpdate, Boolean isUndelete, Boolean isBefore, Boolean isAfter, List<Bid__c> newList, Map<Id, Bid__c> newMap, 
@@ -10,6 +11,8 @@ public class BidManager{
     {
 
         system.debug('running chunk no. ' + AvoidRecursion.triggerCounter++);
+        system.debug('static variable errorsFoundInBeforeInsert: ' + errorsFoundInBeforeInsert);
+        system.debug('static variable calculateItemIdHighestBidMap: ' + calculateItemIdHighestBidMap);
         
         if(newList != null){
             system.debug('Trigger New size: ' + newList.size()); 
@@ -20,7 +23,7 @@ public class BidManager{
         
         system.debug('itemIdHighestBidMap: ' + itemIdHighestBidMap);
 
-        if(isBefore && itemIdHighestBidMap == NULL){
+        if(isBefore && calculateItemIdHighestBidMap){
 
             system.debug('in a before trigger');
             system.debug('AvoidRecursion.AlreadyRunning: ' + AvoidRecursion.AlreadyRunning);
@@ -36,6 +39,10 @@ public class BidManager{
                 //calculateTotalDonation(isDelete, isInsert,
                 //  isUpdate, isUndelete, isBefore, isAfter, newList, newMap, 
                 //  oldList, oldMap, donationsToUpdate);
+
+    if(errorsFoundInBeforeInsert){
+        calculateItemIdHighestBidMap = FALSE;
+    }
 }
 }
 else if(isAfter){
@@ -65,9 +72,14 @@ else if(isAfter){
     }
 
 //KK: Error condition to be checked for Item
-    if(itemsToUpdate.size()>0) update itemsToUpdate.values();
+    if(itemsToUpdate.size()>0){
+        update itemsToUpdate.values();
+    }
 //KK: Look at condition when donation DML fails
-    if(donationsToUpdate.size()>0) update donationsToUpdate.values();
+    if(donationsToUpdate.size()>0){
+        update donationsToUpdate.values();
+        calculateItemIdHighestBidMap = TRUE;
+    }
 
 }
 
@@ -134,6 +146,9 @@ public static void calculateHighestBidForItems(Boolean isDelete, Boolean isInser
         }
          //}
     }
+
+    system.debug('itemIdHighestBidMap: ' + itemIdHighestBidMap);
+
 
     for(Bid__c newBid : newList){   
 
@@ -384,9 +399,9 @@ public static void calculateTotalDonation(Boolean isDelete, Boolean isInsert,
                                         for(Bid__c relatedBid : relatedBidList){
                                             if(donationTotalInitialMap.containsKey(relatedBid.Donation__c)){
                                                 Decimal donationTotalBid = donationTotalInitialMap.get(relatedBid.Donation__c);
-                                                if(donationTotalBid == NULL){
-                                                    donationTotalBid = 0.00;
-                                                }
+                                                //if(donationTotalBid == NULL){
+                                                //    donationTotalBid = 0.00;
+                                                //}
                                                 if(relatedBid.Amount__c != NULL){
                                                     donationTotalBid += relatedBid.Amount__c;
                                                 }

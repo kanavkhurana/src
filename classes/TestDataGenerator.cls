@@ -1,7 +1,7 @@
 @isTest
 public class TestDataGenerator{
     public static Map<Id, Item__c> itemMap;
-    //public static Map<Id, Decimal> itemIdHighestBidMap;
+    public static Map<Id, Decimal> itemIdHighestBidMap;
     public static Map<Id, Decimal> donationIdTotalMap;
     public static Integer numberOfBidsLessThanHighestBid = 0;
 
@@ -20,12 +20,12 @@ public class TestDataGenerator{
     }
     public static String SerializeObjects(List<sObject> list1, List<sObject> list2, List<sObject> list3, List<sObject> list4){
 
-        String json1 = JSON.serialize(list1);
-        String json2 = JSON.serialize(list2);
-        String json3 = JSON.serialize(list3);
-        String json4 = JSON.serialize(list4);
+        String json1 = JSON.serializePretty(list1);
+        String json2 = JSON.serializePretty(list2);
+        String json3 = JSON.serializePretty(list3);
+        String json4 = JSON.serializePretty(list4);
 
-        return json1 + '\n' + json2 + '\n' + json3 + '\n' + json4;
+        return json1 + json2 + json3 + json4;
 
     }
     public static List<Contact> CreateDonors(Integer noOfDonors){
@@ -93,14 +93,17 @@ public class TestDataGenerator{
     //KK: noOfInvalidBids to be shifted to the Custom setting?
     //KK: Can Limit CreateBids to Only creation of Bids
     //KK: Can create another method called ProcessBids to calculate the other metrics - Yes - the processing should be done separately
-    
+    //Must explain logic for creation of bids - very crucial
     public static List<Bid__c> CreateBids(List<Donation__c> donations, List<Item__c> items, Integer noOfBidsPerDonation,
                                           Integer noOfDonations,
                                           Integer noOfItems,
                                           Boolean bidsValid){
 
         List<Bid__c> bids = new List<Bid__c>();
-        Map<Id, Decimal> itemIdHighestBidMap = new Map<Id, Decimal>();
+
+        if(itemIdHighestBidMap == NULL){
+            itemIdHighestBidMap = new Map<Id, Decimal>();
+        }
 
         //Integer bidCounter = Integer.valueOf(Math.min(testVolume.NoOfBidsPerDonation__c,testVolume.NoOfItems__c)); 
         //Integer donationCounter = 0;
@@ -119,6 +122,7 @@ public class TestDataGenerator{
             //Ensure that the amount chosen is greater than the Related Item's Minimum Bid
             if(itemIdHighestBidMap.containsKey(bid.Item__c)){
                 bid.Amount__c = itemIdHighestBidMap.get(bid.Item__c) + 1000;
+                itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
                 //Is this correct??
                 //numberOfBidsLessThanHighestBid++ ;
             }
@@ -153,17 +157,72 @@ public class TestDataGenerator{
     }
     //Make the last 2 item cycles having the same amount
     
-    public static void AddCompetingBids(){
+    public static List<Bid__c> CreateCompetingBids(List<Donation__c> donations, List<Item__c> items, Integer noOfBidsPerDonation,
+                                                   Integer noOfDonations,
+                                                   Integer noOfItems){
             /*for(bidCounter = 0 ; bidCounter < noOfItems * 2 ; bidCounter ++){
                 //get amount from highest bid map that you have constructed
                 Bid__c bid = bids.get(totalNumberOfBids - bidCounter - 1);
                 bid.Amount__c = itemIdHighestBidMap.get(bid.Item__c);
             }*/
+         List<Bid__c> bids = new List<Bid__c>();
+
+        //if(itemIdHighestBidMap == NULL){
+         //   itemIdHighestBidMap = new Map<Id, Decimal>();
+        //}
+
+        //Integer bidCounter = Integer.valueOf(Math.min(testVolume.NoOfBidsPerDonation__c,testVolume.NoOfItems__c)); 
+        //Integer donationCounter = 0;
+        Integer totalNumberOfBids = noOfBidsPerDonation * noOfDonations;
+        
+        for(Integer bidCounter = 0; bidCounter < totalNumberOfBids ; bidCounter++){
+
+            Item__c relatedItem = items.get(Math.mod(bidCounter,noOfItems));
+
+            Bid__c bid = new Bid__c(Item__c = relatedItem.Id,
+                                Donation__c = donations.get(bidCounter / noOfBidsPerDonation).Id
+                                );
+         //if(bidsValid){
+            
+            //Ensure that the amount chosen is greater than the Related Item's Minimum Bid
+            if(itemIdHighestBidMap.containsKey(bid.Item__c)){
+                bid.Amount__c = itemIdHighestBidMap.get(bid.Item__c);
+                //Is this correct??
+                //numberOfBidsLessThanHighestBid++ ;
+            }
+            //else{
+            //    bid.Amount__c = relatedItem.Minimum_Bid__c + 1000;
+            //    itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
+            //}
+
+            //}
+            //else{
+                //Reduce the amount by USD 1000 from the Related Item's Minimum Bid to make it invalid
+            //    bid.Amount__c = relatedItem.Minimum_Bid__c - 1000;
+            //}
+                
+                bids.add(bid);
+            }
+
+         
+        //List<Bid__c> successfulBids = new List<Bid__c>();
+
+        //Calculate Utility Maps that will be used for assertion
+        //KK: To be created as separate functions in the test class
+        // successfulBids = CalculateItemIdHighestBidMap(bids);
+        //No. of successful bids = Initial bids - numberofInvalidBids - numberOfBidsLessThanHighestBid
+
+        //CalculateSuccessfulBids(bids);     
+        //CalculateDonationIdTotalMap(successfulBids);
+
+        //insert bids;
+        return bids;
+
     }
     public static List<Bid__c> CreateBidsBulk(List<Id> donationIds, List<Id> itemIds){
 
         List<Bid__c> bids = new List<Bid__c>();
-        Map<Id, Decimal> itemIdHighestBidMap = new Map<Id, Decimal>();
+        itemIdHighestBidMap = new Map<Id, Decimal>();
 
         //Integer bidCounter = Integer.valueOf(Math.min(testVolume.NoOfBidsPerDonation__c,testVolume.NoOfItems__c)); 
         //Integer donationCounter = 0;
@@ -235,7 +294,7 @@ public class TestDataGenerator{
     //Should these utility methods be part of the main test class?
     public static List<Bid__c> CalculateItemIdHighestBidMap(List<Bid__c> bids){
 
-    Map<Id, Decimal> itemIdHighestBidMap = new Map<Id, Decimal>();
+    itemIdHighestBidMap = new Map<Id, Decimal>();
     List<Bid__c> successfulBids = new List<Bid__c>();
     Set<Id> itemIdsCovered = new Set<Id>();
 
