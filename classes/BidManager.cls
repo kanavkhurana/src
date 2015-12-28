@@ -276,9 +276,9 @@ else{
                                     for(Bid__c relatedBid : relatedBidList){
                                         if(itemHighestBidInitialMap.containsKey(relatedBid.Item__c)){
                                             Decimal itemHighestBid = itemHighestBidInitialMap.get(relatedBid.Item__c);
-                                            if(itemHighestBid == NULL){
-                                                itemHighestBid = 0.00;
-                                            }
+                                            //if(itemHighestBid == NULL){
+                                            //    itemHighestBid = 0.00;
+                                            //}
                                             if(relatedBid.Amount__c != NULL){
                                                 if(relatedBid.Amount__c > itemHighestBid){
                                                     itemHighestBidInitialMap.put(relatedBid.Item__c, relatedBid.Amount__c);

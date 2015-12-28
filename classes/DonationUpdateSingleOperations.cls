@@ -124,4 +124,382 @@ public static testmethod void itemHighestBidTest2(){
   
 }
 
+//KK: May make sense to keep the variable values, ie, 4 or 2000 as either static finals or custom settings
+//KK: See if there's a way to reduce number of lines by creating reusable code??
+
+public static testmethod void bidAmountChangeItemTest(){
+
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors);
+    insert donations;
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 4);
+    insert items;
+    List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, donations.size(), items.size(), TRUE);
+
+    system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
+
+    //Create the second set of Donations and Bids
+    donors = new List<Contact>();
+    donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    donations = new List<Donation__c>();
+    donations = TestDataGenerator.CreateDonations(donors);
+    insert donations;
+    List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, donations.size(), items.size(), TRUE);
+
+    system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
+
+    Test.startTest();
+    insert bidList1;
+    insert bidList2;
+
+    //Change the Bids in the Second Donation to 0 - this should make the Item's highest bid equal to the Bids of the First Donation
+    for(Bid__c bid : bidList2){
+        bid.Amount__c = 0.00;
+    }
+
+    update bidList2;
+
+    Test.stopTest();
+    Integer itemCounter = 0;
+
+    //Query items
+    Map<Id, Item__c> itemMap = new Map<Id, Item__c>(items);
+    items = new List<Item__c>();
+    items = [SELECT Id, Highest_Bid__c FROM Item__c WHERE Id IN: itemMap.keySet()];
+
+    for(Item__c item : items){
+        system.assert(item.Highest_Bid__c == bidList1.get(itemCounter).Amount__c);
+        itemCounter++;
+    }
+  
+}
+
+public static testmethod void bidAmountChangeDonationTest(){
+
+    //Create the First set of Donations and Bids
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors);
+    insert donations;
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 4);
+    insert items;
+    List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, donations.size(), items.size(), TRUE);
+    
+    system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
+
+    //Create the second set of Donations and Bids
+    donors = new List<Contact>();
+    donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    donations = new List<Donation__c>();
+    donations = TestDataGenerator.CreateDonations(donors);
+    insert donations;
+    List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, donations.size(), items.size(), TRUE);
+
+    system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
+
+    Test.startTest();
+    //Database.InsertResult[] resultList = Database.insert(bids, false);
+    insert bidList1;
+    insert bidList2;
+    
+    List<AggregateResult> donationTotalARList = [SELECT Donation__c, SUM(Amount__c) donationTotal
+                                                 FROM Bid__c
+                                                 GROUP BY Donation__c];
+    
+    Map<Id, Decimal> donationIdTotalMap = new Map<Id, Decimal>();
+
+    for(AggregateResult donationTotalAR : donationTotalARList){
+        donationIdTotalMap.put((Id)donationTotalAR.get('Donation__c'), (Decimal)donationTotalAR.get('donationTotal'));
+    }
+    Map<Id, Donation__c> updatedDonationMap = new Map<Id, Donation__c>([SELECT Id, Total_Donation__c FROM Donation__c]);
+
+    for(Id updatedDonationId : updatedDonationMap.keySet()){
+    
+    system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
+    
+    }
+
+    //Query all bids and increase their value
+    List<Bid__c> insertedBids = [SELECT Id, Amount__c FROM Bid__c];
+
+    //Change the bid Amount values
+    for(Bid__c bid : insertedBids){
+        bid.Amount__c = bid.Amount__c + 1000;
+    }
+
+    update insertedBids;
+    Test.stopTest();
+
+    donationTotalARList = [SELECT Donation__c, SUM(Amount__c) donationTotal
+                                                 FROM Bid__c
+                                                 GROUP BY Donation__c];
+
+    donationIdTotalMap = new Map<Id, Decimal>();
+
+    for(AggregateResult donationTotalAR : donationTotalARList){
+        donationIdTotalMap.put((Id)donationTotalAR.get('Donation__c'), (Decimal)donationTotalAR.get('donationTotal'));
+    }
+
+    updatedDonationMap = new Map<Id, Donation__c>([SELECT Id, Total_Donation__c FROM Donation__c]);
+
+    for(Id updatedDonationId : updatedDonationMap.keySet()){
+    
+    system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
+    
+    }
+  
+}
+
+public static testmethod void bidDonationLookupChangeTest(){
+
+    //Create the First set of Donations and Bids
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors);
+    insert donations;
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 4);
+    insert items;
+    List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, donations.size(), items.size(), TRUE);
+    
+    system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
+
+    //Create the second set of Donations and Bids
+    donors = new List<Contact>();
+    donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    donations = new List<Donation__c>();
+    donations = TestDataGenerator.CreateDonations(donors);
+    insert donations;
+    List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, donations.size(), items.size(), TRUE);
+
+    system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
+
+    Test.startTest();
+    //Database.InsertResult[] resultList = Database.insert(bids, false);
+    insert bidList1;
+    insert bidList2;
+    
+    List<AggregateResult> donationTotalARList = [SELECT Donation__c, SUM(Amount__c) donationTotal
+                                                 FROM Bid__c
+                                                 GROUP BY Donation__c];
+    
+    Map<Id, Decimal> donationIdTotalMap = new Map<Id, Decimal>();
+
+    for(AggregateResult donationTotalAR : donationTotalARList){
+        donationIdTotalMap.put((Id)donationTotalAR.get('Donation__c'), (Decimal)donationTotalAR.get('donationTotal'));
+    }
+    List<Donation__c> updatedDonationList = [SELECT Id, Total_Donation__c FROM Donation__c];
+    Map<Id, Donation__c> updatedDonationMap = new Map<Id, Donation__c>(updatedDonationList);
+
+    for(Id updatedDonationId : updatedDonationMap.keySet()){
+    
+    system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
+    
+    }
+
+    //Query all bids and increase their value
+    List<Bid__c> insertedBids = [SELECT Id, Amount__c, Donation__c FROM Bid__c];
+    system.debug('inserted bids before random: ' + insertedBids);
+
+    Id randomDonationId;
+    system.debug('updatedDonationList: ' + updatedDonationList);
+
+    //Change the bid Donation lookups
+    for(Bid__c bid : insertedBids){
+        Id currentBidDonationId = bid.Donation__c;
+        do{
+            randomDonationId = updatedDonationList.get(Integer.valueOf(Math.random()*updatedDonationList.size())).Id;
+        }while(randomDonationId == currentBidDonationId); 
+        bid.Donation__c = randomDonationId;
+    }
+
+    system.debug('inserted bids after random: ' + insertedBids);
+
+    update insertedBids;
+    Test.stopTest();
+
+    donationTotalARList = [SELECT Donation__c, SUM(Amount__c) donationTotal
+                                                 FROM Bid__c
+                                                 GROUP BY Donation__c];
+
+    donationIdTotalMap = new Map<Id, Decimal>();
+
+    for(AggregateResult donationTotalAR : donationTotalARList){
+        donationIdTotalMap.put((Id)donationTotalAR.get('Donation__c'), (Decimal)donationTotalAR.get('donationTotal'));
+    }
+
+    updatedDonationMap = new Map<Id, Donation__c>([SELECT Id, Total_Donation__c FROM Donation__c]);
+
+    for(Id updatedDonationId : updatedDonationMap.keySet()){
+    
+    system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
+    
+    }
+  
+}
+
+public static testmethod void bidItemLookupChangeTest(){
+
+    //Create the First set of Donations and Bids
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors);
+    insert donations;
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 4);
+    insert items;
+    List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, donations.size(), items.size(), TRUE);
+    
+    system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
+
+    //Create the second set of Donations and Bids
+    donors = new List<Contact>();
+    donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    donations = new List<Donation__c>();
+    donations = TestDataGenerator.CreateDonations(donors);
+    insert donations;
+    List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, donations.size(), items.size(), TRUE);
+
+    system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
+
+    Test.startTest();
+    //Database.InsertResult[] resultList = Database.insert(bids, false);
+    insert bidList1;
+    insert bidList2;
+    
+    List<AggregateResult> itemHighestBidARList = [SELECT Item__c, MAX(Amount__c) itemHighestBid
+                                                 FROM Bid__c
+                                                 GROUP BY Item__c];
+    
+    Map<Id, Decimal> itemIdHighestBidMap = new Map<Id, Decimal>();
+
+    for(AggregateResult itemHighestBid : itemHighestBidARList){
+        itemIdHighestBidMap.put((Id)itemHighestBid.get('Item__c'), (Decimal)itemHighestBid.get('itemHighestBid'));
+    }
+    List<Item__c> updatedItemList = [SELECT Id, Highest_Bid__c FROM Item__c];
+    Map<Id, Item__c> updatedItemMap = new Map<Id, Item__c>(updatedItemList);
+
+    for(Id updatedItemId : updatedItemMap.keySet()){
+    
+    system.assert(updatedItemMap.get(updatedItemId).Highest_Bid__c == itemIdHighestBidMap.get(updatedItemId));
+    
+    }
+
+    //List<Bid__c> insertedBids = [SELECT Id, Amount__c, Donation__c FROM Bid__c];
+    bidList2.addAll(bidList1);
+    system.debug('inserted bids before random: ' + bidList2);
+
+    Id randomItemId;
+    system.debug('updatedItemList: ' + updatedItemList);
+
+    //Change the bid Item lookups
+    for(Bid__c bid : bidList2){
+        Id currentBidItemId = bid.Item__c;
+        do{
+            randomItemId = updatedItemList.get(Integer.valueOf(Math.random()*updatedItemList.size())).Id;
+        }while(randomItemId == currentBidItemId); 
+        bid.Item__c = randomItemId;
+    }
+
+    system.debug('inserted bids after random: ' + bidList2);
+
+    update bidList2;
+    Test.stopTest();
+
+    itemHighestBidARList = [SELECT Item__c, MAX(Amount__c) itemHighestBid
+                                                 FROM Bid__c
+                                                 GROUP BY Item__c];
+
+    itemIdHighestBidMap = new Map<Id, Decimal>();
+
+    for(AggregateResult itemHighestBidAR : itemHighestBidARList){
+        itemIdHighestBidMap.put((Id)itemHighestBidAR.get('Item__c'), (Decimal)itemHighestBidAR.get('itemHighestBid'));
+    }
+
+    updatedItemMap = new Map<Id, Item__c>([SELECT Id, Highest_Bid__c FROM Item__c]);
+
+    for(Id updatedItemId : updatedItemMap.keySet()){
+    
+    system.assert(updatedItemMap.get(updatedItemId).Highest_Bid__c == itemIdHighestBidMap.get(updatedItemId));
+    
+    }
+}
+
+public static testmethod void bidDeleteUndeleteDonationTest(){
+
+    //Create the First set of Donations and Bids
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors);
+    insert donations;
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 4);
+    insert items;
+    List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, donations.size(), items.size(), TRUE);
+    
+    system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
+
+    //Create the second set of Donations and Bids
+    donors = new List<Contact>();
+    donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    donations = new List<Donation__c>();
+    donations = TestDataGenerator.CreateDonations(donors);
+    insert donations;
+    List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, donations.size(), items.size(), TRUE);
+
+    system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
+
+    Test.startTest();
+    insert bidList1;
+    insert bidList2;
+    
+    List<AggregateResult> donationTotalARList = [SELECT Donation__c, SUM(Amount__c) donationTotal
+                                                 FROM Bid__c
+                                                 GROUP BY Donation__c];
+    
+    Map<Id, Decimal> donationIdTotalMap = new Map<Id, Decimal>();
+
+    for(AggregateResult donationTotalAR : donationTotalARList){
+        donationIdTotalMap.put((Id)donationTotalAR.get('Donation__c'), (Decimal)donationTotalAR.get('donationTotal'));
+    }
+    List<Donation__c> updatedDonationList = [SELECT Id, Total_Donation__c FROM Donation__c];
+    Map<Id, Donation__c> updatedDonationMap = new Map<Id, Donation__c>(updatedDonationList);
+
+    for(Id updatedDonationId : updatedDonationMap.keySet()){
+    
+    system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
+    
+    }
+
+    //Query all bids and delete them
+    List<Bid__c> bidsToDelete = [SELECT Id, Amount__c, Donation__c FROM Bid__c];
+    system.debug('bidsToDelete: ' + bidsToDelete);
+
+    delete bidsToDelete;
+
+    Test.stopTest();
+
+   donations = [SELECT Total_Donation__c FROM Donation__c];
+
+    for(Donation__c donation : donations){
+        system.assert(donation.Total_Donation__c == 0);
+    }
+
+    //Restore bids
+    List<Bid__c> restoredBids = [SELECT Id FROM Bid__c Where IsDeleted = TRUE ALL ROWS];
+    undelete restoredBids;
+
+    updatedDonationList = [SELECT Id, Total_Donation__c FROM Donation__c];
+    updatedDonationMap = new Map<Id, Donation__c>(updatedDonationList);
+
+    for(Id updatedDonationId : updatedDonationMap.keySet()){
+        system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
+    }
+
+}
+
+
 }
