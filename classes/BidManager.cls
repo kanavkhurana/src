@@ -117,7 +117,7 @@ public static void calculateHighestBidForItems(Boolean isDelete, Boolean isInser
         }*/
          //else{
         //if(itemIdHighestBidMap.isEmpty()){
-        if(itemHighestBid == 0.00){
+        if(itemHighestBid == 0.00 || itemHighestBid == NULL){
             if(itemIdHighestBidMap.isEmpty()){
                 if(newBid.Amount__c >= itemMinimumBid){
                     itemIdHighestBidMap.put(newBid.Item__c, newBid.Amount__c);

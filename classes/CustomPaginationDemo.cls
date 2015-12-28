@@ -1,7 +1,5 @@
 //KK: Look at naming conventions, class, variable and method renaming
 /*
-Assumptions:
-Each Donation has only 1 Bid per Item
 
 */
 public with sharing class CustomPaginationDemo
