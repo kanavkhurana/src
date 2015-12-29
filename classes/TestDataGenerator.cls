@@ -63,7 +63,7 @@ public class TestDataGenerator{
 
     //Pass donors and this method creates 1 donation per donor
     //KK: Is this acceptable or do we keep this configurable??
-    public static List<Donation__c> CreateDonations(List<Contact> donors)
+    public static List<Donation__c> CreateDonations(List<Contact> donors, Boolean statusBlank)
     {
 
         List<Donation__c> donations = new List<Donation__c>();
@@ -73,7 +73,12 @@ public class TestDataGenerator{
         //for(Integer i = 0; i < testVolume.NoOfDonations__c ; i++ ){
         for(Contact donor : donors)
         {
-            donations.add(new Donation__c(Status__c = 'New', Donor__c = donor.Id));
+            if(statusBlank){
+                donations.add(new Donation__c(Donor__c = donor.Id));
+            }
+            else{
+                donations.add(new Donation__c(Status__c = 'New', Donor__c = donor.Id));
+            }
         }   
 
         //insert donations;
@@ -342,7 +347,8 @@ public class TestDataGenerator{
     
     //Should we give flexibility of giving count of number of Items with a Highest Bid and 
     //a count of items without a Highest Bid?
-    public static List<Item__c> CreateItems(Integer upperLimitForMinimumBid, Integer noOfItems){
+    //Default lowerLimit of 1000
+    public static List<Item__c> CreateItems(Integer upperLimitForMinimumBid, Integer noOfItems, Boolean futureClosingDate){
 
         List<Item__c> items = new List<Item__c>();
         itemMap = new Map<Id, Item__c>();
@@ -350,22 +356,28 @@ public class TestDataGenerator{
         for(Integer i = 0; i < noOfItems ; i++){
 
             //Choosing Categories from Cat 1 - Cat 10
-            items.add(new Item__c(Name = 'Item ' + i, 
+            Item__c item = new Item__c(Name = 'Item ' + i, 
                                   Category__c = 'Cat ' + (Math.round(Math.random()*9)  + 1),
-                                  Closing_Date__c = Date.today().addDays(Math.round(Math.random()*366)),
-                                  Minimum_Bid__c = Math.round(Math.random()*upperLimitForMinimumBid)
-                                  ));
+                                Minimum_Bid__c = Math.round(Math.random()*upperLimitForMinimumBid) + 1000);
+            
+            if(futureClosingDate){
+                item.Closing_Date__c = Date.today().addDays(Math.round(Math.random()*366));
+            }
+            else{
+                item.Closing_Date__c = Date.today().addDays(Math.round(Math.random()*366)*(-1));
+            }
+            items.add(item);
 
         }
 
-        //insert items;
-
-        //Item Map populated
-        /*for(Item__c item : items){
-            itemMap.put(item.Id, item);
-        }*/
-
         return items;
+    }
+
+    public static Item__c CreateSingleItem(Decimal minimumBid, String cat){
+        Item__c item = new Item__c(Closing_Date__c = Date.today(),
+                                   Category__c = cat,
+                                   Minimum_Bid__c = minimumBid);
+        return item;
     }
 
     public static List<Item__c> CreateItemsBulk(Integer upperLimitForMinimumBid){
@@ -379,7 +391,7 @@ public class TestDataGenerator{
             items.add(new Item__c(Name = 'Item ' + i, 
                                   Category__c = 'Cat ' + (Math.round(Math.random()*9)  + 1),
                                   Closing_Date__c = Date.today().addDays(Math.round(Math.random()*366)),
-                                  Minimum_Bid__c = Math.round(Math.random()*upperLimitForMinimumBid)
+                                  Minimum_Bid__c = Math.round(Math.random()*upperLimitForMinimumBid) + 1000
                                   ));
 
         }

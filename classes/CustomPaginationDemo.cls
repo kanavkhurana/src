@@ -146,7 +146,7 @@ public with sharing class CustomPaginationDemo
 
         for(BidWithItemsWrapper bwi : obj.categoryItemMap.get(category)){
 
-            system.debug('browsing bwi: ' + bwi);
+            //system.debug('browsing bwi: ' + bwi);
 
             if(bwi.bid.Amount__c != NULL){
                 categoryTotal += bwi.bid.Amount__c;
@@ -271,13 +271,15 @@ public Boolean donationValidated(){
 
     Boolean validation = TRUE;
 
+    system.debug('donation donor: ' + donation.Donor__c);
+    system.debug('donation status: ' + donation.Status__c);
+
     if(donation.Donor__c == NULL){
         donation.Donor__c.addError(System.Label.ValueRequired);
 
         validation = FALSE;
     }
-    system.debug('donation status: ' + donation.Status__c);
-
+    
     if(donation.Status__c == NULL){
         donation.Status__c.addError(System.Label.ValueRequired);
         validation = FALSE;
@@ -325,6 +327,13 @@ public PageReference filterList(){
 
     return null;
 
+}
+
+public List<BidWithItemsWrapper> getFilteredItemSet(){
+    return obj.itemList;
+}
+public List<BidWithItemsWrapper> getCompleteItemSet(){
+    return this.lstWrapper;
 }
 
 public PageReference customSave()
