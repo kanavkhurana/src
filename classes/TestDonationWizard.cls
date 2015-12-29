@@ -474,12 +474,70 @@ public static testmethod void chartDisplayingCorrectlyTest(){
 public static testmethod void bidsDeletionTest(){
 
 //deletion working - success and failure
-
+//Still Pending 
     
+    //update working - success and failure
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
+    insert donations;
 
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 10, TRUE);
+    insert items;
+
+    //Associate 10 bids with items that have a past closing date
+    List<Bid__c> bids = TestDataGenerator.CreateBids(donations, items, 10, donations.size(), items.size(), TRUE);
+    insert bids;
+
+    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
+
+    Set<Id> bidIdSet = new Set<Id>();
+
+    //Clear Bids on Page 1
+    for(BidWithItemsWrapper bwi : donationWizard.lstSetController){
+        bwi.bid.Amount__c =  0.00;
+        bidIdSet.add(bwi.bid.Id);
+    }
+
+    //Click the 'Save' button
+    PageReference donationPage = donationWizard.customSave();
+
+    Id donationId = (Id)donationPage.getUrl().split('/').get(1);
+    system.assert(donationId.getSObjectType().getDescribe().getName() == 'Donation__c');
+
+    //Verify if the bids have been deleted
+    //Query the bids from the DB
+    system.assert([SELECT Id FROM Bid__c WHERE Id IN: bidIdSet].isEmpty());
+    
+}
+//No bids will be inserted if the amounts are blank
+public static testmethod void noBidsInsertionTest(){
+
+    //insertion working - success and failure
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
+
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 10, TRUE);
+    insert items;
+
+    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
+
+    //Click on 'Save' button
+    PageReference donationPage = donationWizard.customSave();
+
+    //Redirected to Donation page
+    Id donationId = (Id)donationPage.getUrl().split('/').get(1);
+
+    system.assert(donationId.getSObjectType().getDescribe().getName() == 'Donation__c');
+
+    //Verify if a donation was created
+    Donation__c donation =  [SELECT Id FROM Donation__c WHERE Donor__c =: donors.get(0).Id];
+    
+    //Verify that no bids were created under the donation
+    system.assert([SELECT COUNT() FROM Bid__c WHERE Donation__c =: donation.Id] == 0);
 
 }
-
 public static testmethod void bidsInsertionTest(){
 
 //insertion working - success and failure
@@ -645,20 +703,153 @@ public static testmethod void blankDonationStatusValidationTest(){
 public static testmethod void blankBidValidationTest(){
 //ERROR
 //submitting a blank bid - the amount field is blank
-    
-}
+    PageReference pageRef = Page.ItemDisplay_v2;
+    Test.setCurrentPage(pageRef); 
 
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 10, TRUE);
+    insert items;
+
+    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
+
+    //Clearing bid Amount values on Page 1
+    for(BidWithItemsWrapper bwi : donationWizard.lstSetController){
+        bwi.bid.Amount__c = NULL;
+    }
+
+    //Click on the 'Save' button
+    PageReference error = donationWizard.customSave();
+
+    //Stay on same page
+    system.assert(error == NULL);
+
+    List<Apexpages.Message> messages = ApexPages.getMessages();
+
+    system.assert(messages.get(0).getComponentLabel() == 'Amount');
+    system.assert(messages.get(0).getDetail() == System.Label.ValueRequired);
+
+    //Refill bid Amount values on Page 1
+    for(BidWithItemsWrapper bwi : donationWizard.lstSetController){
+        bwi.bid.Amount__c = 0.00;
+    }
+
+    //Click on the 'Save' button
+    PageReference donationPage = donationWizard.customSave();
+
+    Id donationId = (Id)donationPage.getUrl().split('/').get(1);
+    system.assert(donationId.getSObjectType().getDescribe().getName() == 'Donation__c');
+
+
+}
+    
 public static testmethod void blankBidFilterTest(){
 //ERROR
 //filtering a blank bid - the amount field is blank
+
+    PageReference pageRef = Page.ItemDisplay_v2;
+    Test.setCurrentPage(pageRef); 
+
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 10, TRUE);
+    insert items;
+
+    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
+
+    //Update bid Amount values on Page 1
+    for(BidWithItemsWrapper bwi : donationWizard.lstSetController){
+        bwi.bid.Amount__c = bwi.bid.Amount__c + 1000;
+    }
+
+    //Next page
+    donationWizard.next();
+
+    List<Apexpages.Message> messages = ApexPages.getMessages();
+
+    system.assert(messages.isEmpty());
+
+    //Clear amount values on Page 2
+    for(BidWithItemsWrapper bwi : donationWizard.lstSetController){
+        bwi.bid.Amount__c = NULL;
+    }
+
+    //Previous page
+    //donationWizard.previous();
+    donationWizard.selectedCategory = items.get(0).Category__c;
+    donationWizard.filterList();
+
+    messages = ApexPages.getMessages();
+
+    for(Apexpages.message msg : messages){
+        system.debug('msg component: ' + msg.getComponentLabel());
+        system.debug('msg detail: ' + msg.getDetail());
+            
+    }
+    system.assert(messages.get(0).getComponentLabel() == 'Amount');
+    system.assert(messages.get(0).getDetail() == System.Label.ValueRequired);
 }
 
 public static testmethod void blankBidPaginationTest(){
 //ERROR
 //paginating a blank bid - the amount field is blank
-}
 
+    PageReference pageRef = Page.ItemDisplay_v2;
+    Test.setCurrentPage(pageRef); 
+
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 10, TRUE);
+    insert items;
+
+    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
+
+    //Update bid Amount values on Page 1
+    for(BidWithItemsWrapper bwi : donationWizard.lstSetController){
+        bwi.bid.Amount__c = bwi.bid.Amount__c + 1000;
+    }
+
+    //Next page
+    donationWizard.next();
+
+    List<Apexpages.Message> messages = ApexPages.getMessages();
+
+    system.assert(messages.isEmpty());
+
+    //Clear amount values on Page 2
+    for(BidWithItemsWrapper bwi : donationWizard.lstSetController){
+        bwi.bid.Amount__c = NULL;
+    }
+
+    //Previous page
+    donationWizard.previous();
+
+    messages = ApexPages.getMessages();
+
+    for(Apexpages.message msg : messages){
+        system.debug('msg component: ' + msg.getComponentLabel());
+        system.debug('msg detail: ' + msg.getDetail());
+            
+    }
+    system.assert(messages.get(0).getComponentLabel() == 'Amount');
+    system.assert(messages.get(0).getDetail() == System.Label.ValueRequired);
+}
+//KK: Change this a scenario where records are accessed based on the User's ownership
 public static testmethod void validUserTest(){
+//User auctioneer = TestDataGenerator.CreateUser('Auctioneer');
+User inventoryManager = TestDataGenerator.CreateUser('Inventory Manager');
+
+system.debug('inventoryManager: ' + inventoryManager);
+//system.debug('auctioneer: ' + auctioneer );
+
+System.RunAs(inventoryManager) {
+           //CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(new Donation__c()));
+            PageReference pageRef = Page.ItemDisplay_v2;
+            Test.setCurrentPage(pageRef); 
+        }
 
 }
 

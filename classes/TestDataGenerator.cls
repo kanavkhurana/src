@@ -4,7 +4,7 @@ public class TestDataGenerator{
     public static Map<Id, Decimal> itemIdHighestBidMap;
     public static Map<Id, Decimal> donationIdTotalMap;
     public static Integer numberOfBidsLessThanHighestBid = 0;
-
+    public static Integer userCount = 0;
     public static TestVolume__c testVolume{
         get{
             if(testVolume == NULL){
@@ -17,6 +17,19 @@ public class TestDataGenerator{
             return testVolume;
         }
         set;
+    }
+    public static Map<String, Id> profileMap{
+        get{
+            if(profileMap == NULL){
+                profileMap = new Map<String, Id>();
+                List<Profile> profiles = [SELECT Name, Id FROM Profile];
+                for(Profile p : profiles){
+                    profileMap.put(p.Name, p.Id);
+                }
+            }
+            return profileMap;
+    }
+    set;
     }
     public static String SerializeObjects(List<sObject> list1, List<sObject> list2, List<sObject> list3, List<sObject> list4){
 
@@ -373,6 +386,18 @@ public class TestDataGenerator{
         return items;
     }
 
+    public static User CreateUser(String profileName){
+
+        User u = new User(profileId = profileMap.get(profileName), username = 'testuser' + userCount + '@advanceddev.org', email = 'testuser' + userCount + '@advanceddev.org',
+                           emailencodingkey = 'UTF-8', localesidkey = 'en_US',
+                           languagelocalekey = 'en_US', timezonesidkey = 'America/Los_Angeles',
+                           alias='tu'+userCount, lastname='user'+userCount);
+
+        userCount++;
+
+        return u;
+
+    }
     public static Item__c CreateSingleItem(Decimal minimumBid, String cat){
         Item__c item = new Item__c(Closing_Date__c = Date.today(),
                                    Category__c = cat,

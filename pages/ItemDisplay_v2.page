@@ -38,7 +38,9 @@
                 <apex:outputPanel id="chartContainer">
                     <apex:outputPanel id="chart" rendered="{!categoryTotalMapSize > 0}">
                         <apex:chart height="300" width="400" data="{!pieData}" name="Bid Chart">
-                            <apex:pieSeries dataField="data" labelField="name" />
+                            <apex:pieSeries dataField="data" labelField="name" >
+                                <apex:chartLabel field="data"/>
+                            </apex:pieSeries>
                             <apex:legend position="right" />
                         </apex:chart>
                     </apex:outputPanel>
