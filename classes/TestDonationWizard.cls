@@ -572,12 +572,12 @@ public static testmethod void bidsUnsuccessfulDeletionTest(){
     }
 
     //Set Static variable to TRUE
-    TestDataGenerator.coverDeletionBlock = TRUE;
+    BidManager.coverDeletionBlock = TRUE;
 
     //Click the 'Save' button
     PageReference error = donationWizard.customSave();
     
-    TestDataGenerator.coverDeletionBlock = FALSE;
+    BidManager.coverDeletionBlock = FALSE;
 
 
     //Stay on same page
@@ -785,11 +785,11 @@ public static testmethod void fakeExceptionTest(){
     //Start with a blank donation
     CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
 
-    TestDataGenerator.coverCatchBlock = TRUE;
+    CustomPaginationDemo.coverCatchBlock = TRUE;
 
     PageReference error = donationWizard.customSave();
-	
-    TestDataGenerator.coverCatchBlock = FALSE;
+    
+    CustomPaginationDemo.coverCatchBlock = FALSE;
 
     //On same page
     system.assert(error == NULL);
