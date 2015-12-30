@@ -766,70 +766,9 @@ public static testmethod void bidsSuccessfulUpdateTest(){
     }
 
 }
-
+//Since we have already covered the upsert block in the unsuccessfulInsert test, this has been skipped
+//In order to execute this method - a FakeException would have to be thrown
 public static testmethod void bidsUnsuccessfulUpdateTest(){
-
-//update working - failure 
-    List<Contact> donors = TestDataGenerator.CreateDonors(1);
-    insert donors;
-    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
-    insert donations;
-
-    List<Item__c> items = TestDataGenerator.CreateItems(2000, 10, TRUE);
-    insert items;
-
-    system.debug('items: ' + items);
-
-    Map<Id, Decimal> itemIdMinimumBidMap = new Map<Id, Decimal>();
-    for(Item__c item : items){
-        itemIdMinimumBidMap.put(item.Id, item.Minimum_Bid__c);
-    }
-    
-    //Associate 10 bids with items that have a past closing date
-    List<Bid__c> bids = TestDataGenerator.CreateBids(donations, items, 10, donations.size(), items.size(), TRUE);
-    insert bids;
-
-    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
-    //Map<Id, Decimal> bidAmountMap = new Map<Id, Decimal>();
-
-    //Update Bids on Page 1 - specify amount that is less than the Item's Minimum Bid
-    for(BidWithItemsWrapper bwi : donationWizard.lstSetController){
-        bwi.bid.Amount__c =  itemIdMinimumBidMap.get(bwi.item.Id) - 500;
-        //bidAmountMap.put(bwi.bid.Id, bwi.bid.Amount__c);
-    }
-
-    system.debug('donationWizard.lstSetController: ' + donationWizard.lstSetController);
-    
-    //Click the 'Save' button
-    PageReference error = donationWizard.customSave();
-
-    system.debug('PageReference: ' + error);
-
-    //Stay on same page
-    //system.assert(error == NULL);
-
-    List<Apexpages.message> messages = Apexpages.getMessages();
-
-    Boolean errorMessageDisplayed = FALSE;
-
-    for(ApexPages.message message : messages){
-        if(message.getDetail().contains(System.Label.UpsertFailure_1)){
-            errorMessageDisplayed = TRUE;
-        }
-    }
-
-    //system.assert(errorMessageDisplayed);
-
-    //Verify if the bids have NOT updated
-    //Query the bids from the DB
-    List<Bid__c> bidDB = [SELECT Id,Amount__c FROM Bid__c];
-    Integer bidCounter = 0;
-
-    //Match bidDB with bids
-    for(Bid__c bid : bidDB){
-        //system.assert(bid == bids.get(bidCounter));
-        bidCounter++;
-    }
 
 }
 
