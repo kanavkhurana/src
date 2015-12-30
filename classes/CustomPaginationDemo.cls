@@ -16,7 +16,7 @@ public with sharing class CustomPaginationDemo
             this.data = data;
         }
     }
-
+    public static Boolean coverCatchBlock = FALSE;
     public List< BidWithItemsWrapper > lstWrapper {get;set;}
     public List< BidWithItemsWrapper > lstSetController{get;set;}
     public Set<String> itemCategories{get;set;}
@@ -352,7 +352,7 @@ public PageReference customSave()
 
         try{
             
-            if(Test.isRunningTest() && TestDataGenerator.coverCatchBlock){
+            if(Test.isRunningTest() && CustomPaginationDemo.coverCatchBlock){
                 throw new FakeException('This is a fake exception');
             }
             system.debug('upserting donation: ' + donation);

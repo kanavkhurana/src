@@ -5,8 +5,6 @@ public class TestDataGenerator{
     public static Map<Id, Decimal> donationIdTotalMap;
     public static Integer numberOfBidsLessThanHighestBid = 0;
     public static Integer userCount = 0;
-    public static Boolean coverCatchBlock = FALSE;
-    public static Boolean coverDeletionBlock = FALSE;
     
     public static TestVolume__c testVolume{
         get{
