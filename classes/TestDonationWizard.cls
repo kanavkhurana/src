@@ -100,13 +100,45 @@ public static testmethod void categoriesToBeLoadedTest(){
 
     CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
 
+    Set<String> categorySet = new Set<String>();
+
+    //Get Categories from the Controller and Create a set
+    for(SelectOption category : donationWizard.getCategories()){
+
+        categorySet.add(category.getValue());
+
+    }
     for(Item__c item : items){
-        system.assert(donationWizard.itemCategories.contains(item.Category__c));
+        system.assert(categorySet.contains(item.Category__c));
     }
 
 }
 
+public static testmethod void correctPageNumberTest(){
 
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
+
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 10, TRUE);
+    insert items;
+
+    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
+
+    //Page number 1 shown 
+    system.assert(donationWizard.getCurrentPage() == 1);
+
+    //Checking 2 pages 
+    system.assert(donationWizard.getTotalNumberOfPages() == 2);
+    
+    //Next page
+    donationWizard.next();
+
+    //Page number 2 shown
+    system.assert(donationWizard.getCurrentPage() == 2);
+
+
+}
 public static testmethod void nextPageToBeShownTest(){
 
     //check Nextpagination
@@ -471,9 +503,9 @@ public static testmethod void chartDisplayingCorrectlyTest(){
 
 }
 
-public static testmethod void bidsDeletionTest(){
+public static testmethod void bidsSuccessfulDeletionTest(){
 
-//deletion working - success and failure
+//deletion working - success
 //Still Pending 
     
     //update working - success and failure
@@ -510,6 +542,63 @@ public static testmethod void bidsDeletionTest(){
     system.assert([SELECT Id FROM Bid__c WHERE Id IN: bidIdSet].isEmpty());
     
 }
+
+public static testmethod void bidsUnsuccessfulDeletionTest(){
+
+//deletion working - success
+//Still Pending 
+    
+    //update working - success and failure
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
+    insert donations;
+
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 10, TRUE);
+    insert items;
+
+    //Associate 10 bids with items that have a past closing date
+    List<Bid__c> bids = TestDataGenerator.CreateBids(donations, items, 10, donations.size(), items.size(), TRUE);
+    insert bids;
+
+    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
+
+    Set<Id> bidIdSet = new Set<Id>();
+
+    //Clear Bids on Page 1
+    for(BidWithItemsWrapper bwi : donationWizard.lstSetController){
+        bwi.bid.Amount__c =  0.00;
+        bidIdSet.add(bwi.bid.Id);
+    }
+
+    //Set Static variable to TRUE
+    TestDataGenerator.coverDeletionBlock = TRUE;
+
+    //Click the 'Save' button
+    PageReference error = donationWizard.customSave();
+
+    //Stay on same page
+    system.assert(error == NULL);
+
+    List<ApexPages.Message> messages = Apexpages.getMessages();
+
+    //Verify that FakeException was thrown
+     Boolean fakeExceptionThrown = FALSE;
+
+    for(ApexPages.Message message : messages){
+        if(message.getDetail().contains('This is a fake exception'))
+        {
+            fakeExceptionThrown = TRUE;
+        }
+    }
+
+    system.assert(fakeExceptionThrown);
+
+    //Verify that the bids have NOT been deleted
+    system.assert([SELECT Id FROM Bid__c WHERE Id IN: bidIdSet].size() > 0);
+    
+}
+
 //No bids will be inserted if the amounts are blank
 public static testmethod void noBidsInsertionTest(){
 
@@ -538,9 +627,9 @@ public static testmethod void noBidsInsertionTest(){
     system.assert([SELECT COUNT() FROM Bid__c WHERE Donation__c =: donation.Id] == 0);
 
 }
-public static testmethod void bidsInsertionTest(){
+public static testmethod void bidsSuccessfulInsertionTest(){
 
-//insertion working - success and failure
+//insertion working - success
 
     List<Contact> donors = TestDataGenerator.CreateDonors(1);
     insert donors;
@@ -577,10 +666,62 @@ public static testmethod void bidsInsertionTest(){
 
 }
 
+public static testmethod void bidsUnsuccessfulInsertionTest(){
 
-public static testmethod void bidsUpdateTest(){
+    //insert working - failure
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
+    //insert donations;
 
-//update working - success and failure
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 10, TRUE);
+    insert items;
+
+    //Generate Item Id > Minimum Bid Map
+    Map<Id, Decimal> itemIdMinimumBidMap = new Map<Id, Decimal>();
+    
+    for(Item__c item : items){
+        itemIdMinimumBidMap.put(item.Id, item.Minimum_Bid__c);
+    }
+    //Generate some invalid Bids
+    //List<Bid__c> bids = TestDataGenerator.CreateBids(donations, items, 10, donations.size(), items.size(), FALSE);
+    //insert bids;
+
+    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
+    //Map<Id, Decimal> bidAmountMap = new Map<Id, Decimal>();
+
+    //Update Bids on Page 1 with amounts less than the Item's minimum bid
+    for(BidWithItemsWrapper bwi : donationWizard.lstSetController){
+        bwi.bid.Amount__c =  itemIdMinimumBidMap.get(bwi.item.Id) - 500;
+    }
+
+    //Click the 'Save' button
+    PageReference error = donationWizard.customSave();
+
+    //Same page returned
+    system.assert(error == NULL);
+
+    List<Apexpages.Message> messages = ApexPages.getMessages();
+
+    //Validate error message returned
+    Boolean errorMessageReturned = FALSE;
+    //system.assert(messages.get(0))
+    for(Apexpages.Message message : messages){
+        if(message.getDetail().contains(System.Label.UpsertFailure_1)){
+            errorMessageReturned = TRUE;
+        }
+    }
+
+    system.assert(errorMessageReturned);
+
+    //Verify that no bids have been inserted
+    system.assert([SELECT COUNT() FROM Bid__c] == 0);
+
+}
+
+public static testmethod void bidsSuccessfulUpdateTest(){
+
+//update working - success 
     List<Contact> donors = TestDataGenerator.CreateDonors(1);
     insert donors;
     List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
@@ -623,6 +764,104 @@ public static testmethod void bidsUpdateTest(){
     for(Id bidId : bidDBMap.keySet()){
         system.assert(bidDBMap.get(bidId).Amount__c == bidAmountMap.get(bidId));
     }
+
+}
+
+public static testmethod void bidsUnsuccessfulUpdateTest(){
+
+//update working - failure 
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
+    insert donations;
+
+    List<Item__c> items = TestDataGenerator.CreateItems(2000, 10, TRUE);
+    insert items;
+
+    system.debug('items: ' + items);
+
+    Map<Id, Decimal> itemIdMinimumBidMap = new Map<Id, Decimal>();
+    for(Item__c item : items){
+        itemIdMinimumBidMap.put(item.Id, item.Minimum_Bid__c);
+    }
+    
+    //Associate 10 bids with items that have a past closing date
+    List<Bid__c> bids = TestDataGenerator.CreateBids(donations, items, 10, donations.size(), items.size(), TRUE);
+    insert bids;
+
+    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
+    //Map<Id, Decimal> bidAmountMap = new Map<Id, Decimal>();
+
+    //Update Bids on Page 1 - specify amount that is less than the Item's Minimum Bid
+    for(BidWithItemsWrapper bwi : donationWizard.lstSetController){
+        bwi.bid.Amount__c =  itemIdMinimumBidMap.get(bwi.item.Id) - 500;
+        //bidAmountMap.put(bwi.bid.Id, bwi.bid.Amount__c);
+    }
+
+    system.debug('donationWizard.lstSetController: ' + donationWizard.lstSetController);
+    
+    //Click the 'Save' button
+    PageReference error = donationWizard.customSave();
+
+    system.debug('PageReference: ' + error);
+
+    //Stay on same page
+    //system.assert(error == NULL);
+
+    List<Apexpages.message> messages = Apexpages.getMessages();
+
+    Boolean errorMessageDisplayed = FALSE;
+
+    for(ApexPages.message message : messages){
+        if(message.getDetail().contains(System.Label.UpsertFailure_1)){
+            errorMessageDisplayed = TRUE;
+        }
+    }
+
+    //system.assert(errorMessageDisplayed);
+
+    //Verify if the bids have NOT updated
+    //Query the bids from the DB
+    List<Bid__c> bidDB = [SELECT Id,Amount__c FROM Bid__c];
+    Integer bidCounter = 0;
+
+    //Match bidDB with bids
+    for(Bid__c bid : bidDB){
+        //system.assert(bid == bids.get(bidCounter));
+        bidCounter++;
+    }
+
+}
+
+public static testmethod void fakeExceptionTest(){
+    List<Contact> donors = TestDataGenerator.CreateDonors(1);
+    insert donors;
+
+    List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
+    //insert donations;
+
+    //Start with a blank donation
+    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
+
+    TestDataGenerator.coverCatchBlock = TRUE;
+
+    PageReference error = donationWizard.customSave();
+
+    //On same page
+    system.assert(error == NULL);
+
+    List<Apexpages.Message> messages = ApexPages.getMessages();
+
+    Boolean fakeExceptionThrown = FALSE;
+
+    for(ApexPages.Message message : messages){
+        if(message.getDetail().contains('This is a fake exception'))
+        {
+            fakeExceptionThrown = TRUE;
+        }
+    }
+
+    system.assert(fakeExceptionThrown);
 
 }
 
@@ -837,19 +1076,55 @@ public static testmethod void blankBidPaginationTest(){
     system.assert(messages.get(0).getComponentLabel() == 'Amount');
     system.assert(messages.get(0).getDetail() == System.Label.ValueRequired);
 }
-//KK: Change this a scenario where records are accessed based on the User's ownership
-public static testmethod void validUserTest(){
-//User auctioneer = TestDataGenerator.CreateUser('Auctioneer');
-User inventoryManager = TestDataGenerator.CreateUser('Inventory Manager');
 
-system.debug('inventoryManager: ' + inventoryManager);
-//system.debug('auctioneer: ' + auctioneer );
+//Since Controller has 'with sharing' enabled - the user only sees records he/she owns - as OWD is Private for Donations
+public static testmethod void donationVisibleTest(){
 
-System.RunAs(inventoryManager) {
-           //CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(new Donation__c()));
-            PageReference pageRef = Page.ItemDisplay_v2;
-            Test.setCurrentPage(pageRef); 
+User auctioneer1 = TestDataGenerator.CreateUser('Auctioneer');
+User auctioneer2 = TestDataGenerator.CreateUser('Auctioneer');
+
+insert auctioneer1;
+insert auctioneer2;
+
+system.debug('auctioneer1: ' + auctioneer1);
+system.debug('auctioneer2: ' + auctioneer2);
+
+ List<Contact> donorList1 = TestDataGenerator.CreateDonors(1);
+insert donorList1;
+List<Donation__c> donationList1 = TestDataGenerator.CreateDonations(donorList1, FALSE);
+
+//Change Donation Owner to Auctioneer 1
+donationList1.get(0).OwnerId = auctioneer1.Id;
+insert donationList1;
+
+List<Contact> donorList2 = new List<Contact>();
+donorList2 = TestDataGenerator.CreateDonors(1);
+insert donorList2;
+
+List<Donation__c> donationList2 = new List<Donation__c>();
+donationList2 = TestDataGenerator.CreateDonations(donorList2, FALSE);
+
+//Change Donation Owner to Auctioneer 2
+donationList2.get(0).OwnerId = auctioneer2.Id;
+insert donationList2;
+
+try{
+//Auctioneer 1 should not see Auctioneer 2's donations on the DonationWizard
+System.RunAs(auctioneer1) {
+           CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donationList2.get(0)));
+            
         }
+
+}
+catch(System.QueryException ex){
+    system.assert(ex.getMessage().contains('List has no rows for assignment to SObject'));
+}
+
+//However, he can see his own Donation Records
+System.RunAs(auctioneer1){
+    CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donationList1.get(0)));
+
+}
 
 }
 

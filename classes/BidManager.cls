@@ -10,9 +10,15 @@ public class BidManager{
       List<Bid__c> oldList, Map<Id, Bid__c> oldMap, Map<Id, Donation__c> donationsToUpdate, Map<Id, Item__c> itemsToUpdate)
     {
 
+        //For Deletion error coverage
+        if(Test.IsRunningTest() && TestDataGenerator.coverDeletionBlock){
+            throw new FakeException('This is a fake exception');
+        }
+        
         system.debug('running chunk no. ' + AvoidRecursion.triggerCounter++);
         system.debug('static variable errorsFoundInBeforeInsert: ' + errorsFoundInBeforeInsert);
         system.debug('static variable calculateItemIdHighestBidMap: ' + calculateItemIdHighestBidMap);
+        
         
         if(newList != null){
             system.debug('Trigger New size: ' + newList.size()); 
