@@ -433,7 +433,7 @@ public static testmethod void bidItemLookupChangeTest(){
     
     }
 
-    //List<Bid__c> insertedBids = [SELECT Id, Amount__c, Donation__c FROM Bid__c];
+    //List<Bid__c> insertedBids = [SELECT Id, Amount__c, Item__c FROM Bid__c];
     bidList2.addAll(bidList1);
     system.debug('inserted bids before random: ' + bidList2);
 

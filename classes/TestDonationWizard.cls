@@ -576,6 +576,9 @@ public static testmethod void bidsUnsuccessfulDeletionTest(){
 
     //Click the 'Save' button
     PageReference error = donationWizard.customSave();
+    
+    TestDataGenerator.coverDeletionBlock = FALSE;
+
 
     //Stay on same page
     system.assert(error == NULL);
@@ -785,6 +788,8 @@ public static testmethod void fakeExceptionTest(){
     TestDataGenerator.coverCatchBlock = TRUE;
 
     PageReference error = donationWizard.customSave();
+	
+    TestDataGenerator.coverCatchBlock = FALSE;
 
     //On same page
     system.assert(error == NULL);
