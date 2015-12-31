@@ -4,7 +4,7 @@ public class BidManager{
     public static Map<Id, Decimal> itemIdHighestBidMap;
     public static Boolean errorsFoundInBeforeInsert = FALSE;
     public static Boolean calculateItemIdHighestBidMap = TRUE;
-    public static Boolean coverDeletionBlock = FALSE;
+    //public static Boolean coverDeletionBlock = FALSE;
 
     public static void dispatcher(Boolean isDelete, Boolean isInsert,
       Boolean isUpdate, Boolean isUndelete, Boolean isBefore, Boolean isAfter, List<Bid__c> newList, Map<Id, Bid__c> newMap, 
@@ -12,9 +12,9 @@ public class BidManager{
     {
 
         //For Deletion error coverage
-        if(Test.IsRunningTest() && BidManager.coverDeletionBlock){
+        /*if(Test.IsRunningTest() && BidManager.coverDeletionBlock){
             throw new FakeException('This is a fake exception');
-        }
+        }*/
 
         system.debug('running chunk no. ' + AvoidRecursion.triggerCounter++);
         system.debug('static variable errorsFoundInBeforeInsert: ' + errorsFoundInBeforeInsert);

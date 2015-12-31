@@ -542,7 +542,11 @@ public static testmethod void bidsSuccessfulDeletionTest(){
     system.assert([SELECT Id FROM Bid__c WHERE Id IN: bidIdSet].isEmpty());
     
 }
-
+//Initially tried throwing a custom exception during Deletion of Bids in the Controller using 
+//Test.IsRunningTest and Static variables - however, was facing concurrency issues when the various
+//test methods were run in parallel - as one test method would reference the static variable
+//value set by another
+//Chose to simulate deletion error in another way
 public static testmethod void bidsUnsuccessfulDeletionTest(){
 
 //deletion working - success
@@ -572,33 +576,35 @@ public static testmethod void bidsUnsuccessfulDeletionTest(){
     }
 
     //Set Static variable to TRUE
-    BidManager.coverDeletionBlock = TRUE;
+    //BidManager.coverDeletionBlock = TRUE;
+    //Force delete all bids before calling Controller 'Delete' to incur a Deletion exception
+    delete bids;
 
     //Click the 'Save' button
     PageReference error = donationWizard.customSave();
     
-    BidManager.coverDeletionBlock = FALSE;
-
+    //BidManager.coverDeletionBlock = FALSE;
 
     //Stay on same page
     system.assert(error == NULL);
 
     List<ApexPages.Message> messages = Apexpages.getMessages();
 
-    //Verify that FakeException was thrown
-     Boolean fakeExceptionThrown = FALSE;
+    //Verify that deletionException was thrown
+     Boolean deletionExceptionThrown = FALSE;
 
     for(ApexPages.Message message : messages){
-        if(message.getDetail().contains('This is a fake exception'))
+        system.debug('message componentlabel: ' + message.getComponentLabel());
+        system.debug('message detail: ' + message.getDetail());
+        
+        if(message.getDetail().contains('entity is deleted'))
         {
-            fakeExceptionThrown = TRUE;
+            deletionExceptionThrown = TRUE;
         }
     }
 
-    system.assert(fakeExceptionThrown);
+    system.assert(deletionExceptionThrown);
 
-    //Verify that the bids have NOT been deleted
-    system.assert([SELECT Id FROM Bid__c WHERE Id IN: bidIdSet].size() > 0);
     
 }
 
@@ -769,13 +775,16 @@ public static testmethod void bidsSuccessfulUpdateTest(){
     }
 
 }
-//Since we have already covered the upsert block in the unsuccessfulInsert test, this has been skipped
-//In order to execute this method - a FakeException would have to be thrown
+//Since we have already covered the upsert scenario in the unsuccessfulInsert test, this has been skipped
 public static testmethod void bidsUnsuccessfulUpdateTest(){
 
 }
-
-public static testmethod void fakeExceptionTest(){
+//Initially tried throwing a custom exception during Upsert of Donation in the Controller using 
+//Test.IsRunningTest and Static variables - however, was facing concurrency issues when the various
+//test methods were run in parallel - as one test method would reference the static variable
+//value set by another
+//Chose to simulate upsert error in another way
+public static testmethod void bidsUnsuccessfulDonationUpsertTest(){
     List<Contact> donors = TestDataGenerator.CreateDonors(1);
     insert donors;
 
@@ -785,27 +794,34 @@ public static testmethod void fakeExceptionTest(){
     //Start with a blank donation
     CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(donations.get(0)));
 
-    CustomPaginationDemo.coverCatchBlock = TRUE;
+    //CustomPaginationDemo.coverCatchBlock = TRUE;
+    //Pre-mention the Id of the donation record to force an error during donation upsert
+    String invalidDonationId = Donation__c.SobjectType.getDescribe().getKeyPrefix();
+    //Append 12 zeros to complete the Id length requirement
+    invalidDonationId += '000000000000';
+
+    //Mention id for donation
+    donationWizard.donation.Id = invalidDonationId;
 
     PageReference error = donationWizard.customSave();
     
-    CustomPaginationDemo.coverCatchBlock = FALSE;
+    //CustomPaginationDemo.coverCatchBlock = FALSE;
 
     //On same page
     system.assert(error == NULL);
 
     List<Apexpages.Message> messages = ApexPages.getMessages();
 
-    Boolean fakeExceptionThrown = FALSE;
+    Boolean donationUpsertExceptionThrown = FALSE;
 
     for(ApexPages.Message message : messages){
-        if(message.getDetail().contains('This is a fake exception'))
+        if(message.getDetail().contains('INVALID_CROSS_REFERENCE_KEY'))
         {
-            fakeExceptionThrown = TRUE;
+            donationUpsertExceptionThrown = TRUE;
         }
     }
 
-    system.assert(fakeExceptionThrown);
+    system.assert(donationUpsertExceptionThrown);
 
 }
 
