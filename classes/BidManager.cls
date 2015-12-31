@@ -161,7 +161,7 @@ public static void calculateHighestBidForItems(Boolean isDelete, Boolean isInser
 
         if(itemIdHighestBidMap.containsKey(newBid.Item__c)){
             if(newBid.Amount__c < itemIdHighestBidMap.get(newBid.Item__c)){
-                newBid.addError(System.Label.BidError);
+                newBid.addError(System.Label.HighestBidError);
                 //KK: Can be removed after code is deployable
                 errorList.add(newBid);
                 errorsFoundInBeforeInsert = TRUE;
@@ -170,7 +170,7 @@ public static void calculateHighestBidForItems(Boolean isDelete, Boolean isInser
 
                 //Check if already covered same bid amount before
                 if(itemIdsAlreadyCovered.contains(newBid.Item__c)){
-                    newBid.addError(System.Label.BidError);
+                    newBid.addError(System.Label.HighestBidError);
                     //KK: Can be removed after code is deployable
                     errorList.add(newBid);
                     

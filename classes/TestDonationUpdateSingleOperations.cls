@@ -164,7 +164,7 @@ public static testmethod void itemHighestBidCompeteTest(){
             System.assert(ex.getDmlIndex(i) == (i+4));
           }
 
-          System.assert(ex.getMessage().contains(System.Label.BidError));
+          System.assert(ex.getMessage().contains(System.Label.HighestBidError));
     }
   
 }
