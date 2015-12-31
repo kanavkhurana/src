@@ -2,7 +2,7 @@
 /*
 
 */
-public with sharing class CustomPaginationDemo
+public with sharing class DonationWizardController
 {
 
    // Wrapper class
@@ -37,7 +37,7 @@ public with sharing class CustomPaginationDemo
 
     CustomIterable obj;
 
-    public CustomPaginationDemo(ApexPages.StandardController sc) 
+    public DonationWizardController(ApexPages.StandardController sc) 
     {
         itemList = new List<Item__c>();
         lstWrapper =  new List< BidWithItemsWrapper >();
@@ -352,7 +352,7 @@ public PageReference customSave()
 
         try{
             
-            /*if(Test.isRunningTest() && CustomPaginationDemo.coverCatchBlock){
+            /*if(Test.isRunningTest() && DonationWizardController.coverCatchBlock){
                 throw new FakeException('This is a fake exception');
             }*/
             system.debug('upserting donation: ' + donation);

@@ -1,6 +1,9 @@
 /**
-    BidManager : This class handles the various update operations on the 'Item' and 'Donation' objects
-    Logic: As per the Document, it was clear that Bids made for any item that were less than or equal to the 
+    Purpose : 
+    This class handles the various update operations on the 'Item' and 'Donation' objects
+    
+    Logic: 
+    As per the Document, it was clear that Bids made for any item that were less than or equal to the 
     Item's highest Bid would be rejected. Now let's look at a bulk scenario.
     Eg, Let's say we have an Item, Item 1 with a Highest Bid Value of USD 1000
     Now, let's say that we are uploading multiple Bids for Item 1 with the following values:
@@ -25,6 +28,13 @@
 
     For all other operations, ie, 'delete', 'update' and 'undelete' - only 'After' trigger contexts are utilised.
     Hence, as such, DML updates to Item and Dontaion are done only in 'After' trigger contexts
+
+    Bulk Behaviour:
+    In the case of more than 200 records being inserted at the same time, the following behaviour will be observed:
+    The 'AddError' and Highest Bid identification logic will run for 200 records at a time, since that's the maximum number of
+    records that a single trigger invocation can process. Hence, for a bulk quantity of data, it may so happen that multiple
+    bids belonging to the same item may get inserted, since these could have come from different 200 record chunks.
+
 */
 public class BidManager{
     

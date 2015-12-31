@@ -1,8 +1,11 @@
+/**
+Purpose: 
+Custom Wrapper created so that Bid and Item fields could be displayed on a single row
+*/
 public class BidWithItemsWrapper implements Comparable{
 
     public Bid__c bid{ get; set; }
     public Item__c item { get; set;}
-    //public Integer index{get;set;}
 
     public BidWithItemsWrapper(Bid__c b, Item__c i){
         if(b.Amount__c == NULL){
@@ -10,11 +13,10 @@ public class BidWithItemsWrapper implements Comparable{
         }
         bid = b;
         item = i;
-        //this.index = index;
        
     }
 
-    // Compare opportunities based on the opportunity amount.
+    //Custom sort - Compare Items based on Minimum Bid
     public Integer compareTo(Object compareTo) {
         // Cast argument to BidWithItemsWrapper
         BidWithItemsWrapper compareToBWI = (BidWithItemsWrapper)compareTo;

@@ -1,6 +1,7 @@
 //Visuaforce test
 @isTest
-public class TestDonationWizard{
+public class TestDonationWizard_NU{
+/*
     public static testmethod void newDonationOnPageLoadTest()
     {
         //check if all items with close date in the future are appearing on the page - Loading condition for new donation 
@@ -22,6 +23,7 @@ public class TestDonationWizard{
         system.assert(donationWizard.completeWrapperList.size() == itemsWithAFutureClosingDate.size());
         
     }
+    
     
     public static testmethod void existingDonationOnPageLoadTest(){
         // check loading condition for existing donation
@@ -1103,5 +1105,6 @@ public class TestDonationWizard{
         }
         
     }
+    */
     
 }
