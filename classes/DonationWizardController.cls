@@ -274,20 +274,22 @@ public with sharing class DonationWizardController
         
         for(String category : page.categoryItemMap.keySet()){
             
-            categoryTotal = 0.0;
-            
-            system.debug('browsing category: ' + category);
-            
-            for(BidWithItemsWrapper bwi : page.categoryItemMap.get(category)){
+            if(category != NULL){
+                categoryTotal = 0.0;
                 
-                if(bwi.bid.Amount__c != NULL){
-                    categoryTotal += bwi.bid.Amount__c;
+                system.debug('browsing category: ' + category);
+                
+                for(BidWithItemsWrapper bwi : page.categoryItemMap.get(category)){
+                    
+                    if(bwi.bid.Amount__c != NULL){
+                        categoryTotal += bwi.bid.Amount__c;
+                    }
                 }
-            }
-            
-            //Only consider Category if Total is > 0
-            if(categoryTotal > 0){
-                categoryTotalMap.put(category, categoryTotal);
+                
+                //Only consider Category if Total is > 0
+                if(categoryTotal > 0){
+                    categoryTotalMap.put(category, categoryTotal);
+                }
             }
         }
     }
