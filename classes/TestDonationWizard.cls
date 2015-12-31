@@ -665,7 +665,12 @@ public static testmethod void bidsSuccessfulInsertionTest(){
     }
 
     //Click on 'Save' button
-    donationWizard.customSave();
+    PageReference donationPage = donationWizard.customSave();
+
+    //Redirected to Donation page
+    Id donationId = (Id)donationPage.getUrl().split('/').get(1);
+
+    system.assert(donationId.getSObjectType().getDescribe().getName() == 'Donation__c');
 
     //Verify if a donation was created
     Donation__c donation =  [SELECT Id FROM Donation__c WHERE Donor__c =: donors.get(0).Id];
@@ -763,7 +768,12 @@ public static testmethod void bidsSuccessfulUpdateTest(){
     }
 
     //Click the 'Save' button
-    donationWizard.customSave();
+    PageReference donationPage = donationWizard.customSave();
+
+    //Redirected to Donation page
+    Id donationId = (Id)donationPage.getUrl().split('/').get(1);
+
+    system.assert(donationId.getSObjectType().getDescribe().getName() == 'Donation__c');
 
     //Verify if the bids have updated
     //Query the bids from the DB
@@ -839,7 +849,10 @@ public static testmethod void blankDonationDonorValidationTest(){
     CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(new Donation__c(Status__c = 'New')));
 
     //Save the page
-    donationWizard.customSave();
+    PageReference error = donationWizard.customSave();
+
+    //On same page
+    system.assert(error == NULL);
 
     List<Apexpages.Message> messages = ApexPages.getMessages();
     
@@ -876,7 +889,10 @@ public static testmethod void blankDonationStatusValidationTest(){
     CustomPaginationDemo donationWizard = new CustomPaginationDemo(new ApexPages.StandardController(new Donation__c(Donor__c = donors.get(0).Id)));
 
     //Save the page
-    donationWizard.customSave();
+    PageReference error = donationWizard.customSave();
+
+    //On same page
+    system.assert(error == NULL);
 
     List<Apexpages.Message> messages = ApexPages.getMessages();
     

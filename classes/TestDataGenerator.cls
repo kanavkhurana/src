@@ -375,10 +375,10 @@ public class TestDataGenerator{
                                 Minimum_Bid__c = Math.round(Math.random()*upperLimitForMinimumBid) + 1000);
             
             if(futureClosingDate){
-                item.Closing_Date__c = Date.today().addDays(Math.round(Math.random()*366));
+                item.Closing_Date__c = Date.today().addDays(10);
             }
             else{
-                item.Closing_Date__c = Date.today().addDays(Math.round(Math.random()*366)*(-1));
+                item.Closing_Date__c = Date.today().addDays(-10);
             }
             items.add(item);
 
@@ -416,7 +416,8 @@ public class TestDataGenerator{
             //Choosing Categories from Cat 1 - Cat 10
             items.add(new Item__c(Name = 'Item ' + i, 
                                   Category__c = 'Cat ' + (Math.round(Math.random()*9)  + 1),
-                                  Closing_Date__c = Date.today().addDays(Math.round(Math.random()*366)),
+                                  //Closing_Date__c = Date.today().addDays(Math.round(Math.random()*366)),
+                                  Closing_Date__c = Date.today().addDays(10),
                                   Minimum_Bid__c = Math.round(Math.random()*upperLimitForMinimumBid) + 1000
                                   ));
 
