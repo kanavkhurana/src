@@ -120,8 +120,8 @@ public class TestDataGenerator{
 
         List<Bid__c> bids = new List<Bid__c>();
 
-        if(itemIdHighestBidMap == NULL){
-            itemIdHighestBidMap = new Map<Id, Decimal>();
+        if(TestDataGenerator.itemIdHighestBidMap == NULL){
+            TestDataGenerator.itemIdHighestBidMap = new Map<Id, Decimal>();
         }
 
         //Integer bidCounter = Integer.valueOf(Math.min(testVolume.NoOfBidsPerDonation__c,testVolume.NoOfItems__c)); 
@@ -139,15 +139,15 @@ public class TestDataGenerator{
          if(bidsValid){
             
             //Ensure that the amount chosen is greater than the Related Item's Minimum Bid
-            if(itemIdHighestBidMap.containsKey(bid.Item__c)){
-                bid.Amount__c = itemIdHighestBidMap.get(bid.Item__c) + 1000;
-                itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
+            if(TestDataGenerator.itemIdHighestBidMap.containsKey(bid.Item__c)){
+                bid.Amount__c = TestDataGenerator.itemIdHighestBidMap.get(bid.Item__c) + 1000;
+                TestDataGenerator.itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
                 //Is this correct??
                 //numberOfBidsLessThanHighestBid++ ;
             }
             else{
                 bid.Amount__c = relatedItem.Minimum_Bid__c + 1000;
-                itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
+                TestDataGenerator.itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
             }
 
             }
@@ -204,8 +204,8 @@ public class TestDataGenerator{
          //if(bidsValid){
             
             //Ensure that the amount chosen is greater than the Related Item's Minimum Bid
-            if(itemIdHighestBidMap.containsKey(bid.Item__c)){
-                bid.Amount__c = itemIdHighestBidMap.get(bid.Item__c);
+            if(TestDataGenerator.itemIdHighestBidMap.containsKey(bid.Item__c)){
+                bid.Amount__c = TestDataGenerator.itemIdHighestBidMap.get(bid.Item__c);
                 //Is this correct??
                 //numberOfBidsLessThanHighestBid++ ;
             }
@@ -241,7 +241,7 @@ public class TestDataGenerator{
     public static List<Bid__c> CreateBidsBulk(List<Id> donationIds, List<Id> itemIds){
 
         List<Bid__c> bids = new List<Bid__c>();
-        itemIdHighestBidMap = new Map<Id, Decimal>();
+        TestDataGenerator.itemIdHighestBidMap = new Map<Id, Decimal>();
 
         //Integer bidCounter = Integer.valueOf(Math.min(testVolume.NoOfBidsPerDonation__c,testVolume.NoOfItems__c)); 
         //Integer donationCounter = 0;
@@ -258,14 +258,14 @@ public class TestDataGenerator{
             //if(countInvalidBids == noOfInvalidBids){
             
             //Ensure that the amount chosen is greater than the Related Item's Minimum Bid
-            if(itemIdHighestBidMap.containsKey(bid.Item__c)){
-                bid.Amount__c = itemIdHighestBidMap.get(bid.Item__c) + 1000;
+            if(TestDataGenerator.itemIdHighestBidMap.containsKey(bid.Item__c)){
+                bid.Amount__c = TestDataGenerator.itemIdHighestBidMap.get(bid.Item__c) + 1000;
                 //Is this correct??
                 //numberOfBidsLessThanHighestBid++ ;
             }
             else{
                 bid.Amount__c = relatedItem.Minimum_Bid__c + 1000;
-                itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
+                TestDataGenerator.itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
             }
 
             //}
@@ -313,22 +313,22 @@ public class TestDataGenerator{
     //Should these utility methods be part of the main test class?
     public static List<Bid__c> CalculateItemIdHighestBidMap(List<Bid__c> bids){
 
-    itemIdHighestBidMap = new Map<Id, Decimal>();
+    TestDataGenerator.itemIdHighestBidMap = new Map<Id, Decimal>();
     List<Bid__c> successfulBids = new List<Bid__c>();
     Set<Id> itemIdsCovered = new Set<Id>();
 
     for(Bid__c bid : bids){
-            if(itemIdHighestBidMap.containsKey(bid.Item__c)){
-                Decimal highestBidAmount = itemIdHighestBidMap.get(bid.Item__c);
+            if(TestDataGenerator.itemIdHighestBidMap.containsKey(bid.Item__c)){
+                Decimal highestBidAmount = TestDataGenerator.itemIdHighestBidMap.get(bid.Item__c);
                 if(bid.Amount__c > highestBidAmount){
-                    itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
+                    TestDataGenerator.itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
                     //numberOfBidsLessThanHighestBid++;
                 }
             }
         }
     
         for(Bid__c bid : bids){
-                Decimal highestBidForItem = itemIdHighestBidMap.get(bid.Item__c);
+                Decimal highestBidForItem = TestDataGenerator.itemIdHighestBidMap.get(bid.Item__c);
                 if(bid.Amount__c < highestBidForItem){
                     //itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
                     numberOfBidsLessThanHighestBid++;
