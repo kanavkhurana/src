@@ -1,6 +1,9 @@
 /**
 Purpose:
 This test class validates the Donation Wizard logic that is a part of the application
+Testing done for the Visulforce page is based on Custom Use Cases calling the non-bulk Data Creation methods
+of the TestDataGenerator
+However, manual testing has been done in the Org with the data volumes mentioned in the Assignment Document
 */
 @isTest
 public class TestDonationWizard{

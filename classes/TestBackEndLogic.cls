@@ -2,6 +2,10 @@
 Purpose:
 This test class validates the custom update logic that is a part of the application
 This entails the workings of the Bid Object, and it's impact on the Item and Donation objects
+All these tests have been written as Bulk tests with the use Cases calling the bulk Data Creation methods of the TestDataGenerator
+Although, as Salesforce Governor Limits restrict the number of records that can be part of a DML statemet, the volumes used here are
+less than those specified in the Assignment Document.
+However, manual testing has been done in the Org with the data volumes mentioned in the Assignment Document
 */
 @isTest
 public class TestBackEndLogic{
@@ -9,16 +13,16 @@ public class TestBackEndLogic{
     /**
     Only Bids with Amount > Item's Minimum Bid are acceptable 
     */
-    public static testmethod void validBidTest(){
+    public static testmethod void validBidBulkTest(){
         
         //Create Donations, Bids and Items
-        List<Contact> donors = TestDataGenerator.CreateDonors(1);
+        List<Contact> donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Item__c> items = TestDataGenerator.CreateItems(2000, 4, TRUE);
+        List<Item__c> items = TestDataGenerator.CreateItemsBulk(2000, TRUE);
         insert items;
-        List<Bid__c> bids = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bids = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
         system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bids));
         
@@ -32,19 +36,20 @@ public class TestBackEndLogic{
         
         
     }
+    
     /**
     Bids with Amount < Item's Minimum Bid are not acceptable
     */
-    public static testmethod void invalidBidTest(){
+    public static testmethod void invalidBidBulkTest(){
         
         //Crete Donations, Bids and Items
-        List<Contact> donors = TestDataGenerator.CreateDonors(1);
+        List<Contact> donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Item__c> items = TestDataGenerator.CreateItems(2000, 4, TRUE);
+        List<Item__c> items = TestDataGenerator.CreateItemsBulk(2000, TRUE);
         insert items;
-        List<Bid__c> bids = TestDataGenerator.CreateBids(donations, items, 4, FALSE);
+        List<Bid__c> bids = TestDataGenerator.CreateBidsBulk(donations, items, FALSE);
         
         system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bids));
         
@@ -61,20 +66,20 @@ public class TestBackEndLogic{
         } 
         
     }
-    
+
     /**
     Total Amount of All bids is updated on the Related Donation
     */
-    public static testmethod void donationTotalTest(){
+    public static testmethod void donationTotalBulkTest(){
         
         //Create donations, bids and items
-        List<Contact> donors = TestDataGenerator.CreateDonors(1);
+        List<Contact> donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Item__c> items = TestDataGenerator.CreateItems(2000, 4, TRUE);
+        List<Item__c> items = TestDataGenerator.CreateItemsBulk(2000, TRUE);
         insert items;
-        List<Bid__c> bids = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bids = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
         system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bids));
         
@@ -83,40 +88,45 @@ public class TestBackEndLogic{
         insert bids;
         Test.stopTest();
         
-        //Query Bids to get total
-        Decimal bidTotal = (Decimal)[SELECT SUM(Amount__c) bidTotal FROM Bid__c].get(0).get('bidTotal');
-        //Query Donation to get total
-        Decimal donationTotal = [SELECT Total_Donation__c FROM Donation__c WHERE Id =: donations.get(0).Id].Total_Donation__c;
-        //Verify that both are the same
-        system.assert(donationTotal == bidTotal);
+        //Get Donation Total Map from Bids
+        Map<Id, Decimal> donationTotalFromBids = TestDataGenerator.CalculateDonationTotalMapFromBids(bids);
+        
+        //Query Donation to get Donation Total Map
+        Map<Id, Decimal> donationTotalFromDonations = TestDataGenerator.CalculateDonationTotalMapFromDonations([SELECT Id, Total_Donation__c FROM Donation__c]);
+        
+        Boolean totalMismatch = FALSE;
+
+        //Verify that both Maps are the same
+        
+        system.assert(TestDataGenerator.CompareMaps(donationTotalFromBids, donationTotalFromDonations ));
         
     }
     
     /**
     Highest Bid is updated on the Item - Bids for Same item in separate Lists
     */
-    public static testmethod void itemHighestBidNonCompeteTest(){
+    public static testmethod void itemHighestBidNonCompeteBulkTest(){
         
         //Create the First set of Donations and Bids
-        List<Contact> donors = TestDataGenerator.CreateDonors(1);
+        List<Contact> donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
         //Create a set of items
-        List<Item__c> items = TestDataGenerator.CreateItems(2000, 4, TRUE);
+        List<Item__c> items = TestDataGenerator.CreateItemsBulk(2000, TRUE);
         insert items;
-        List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList1 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
         system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
         
         //Create the second set of Donations and Bids - for the same set of items
         donors = new List<Contact>();
-        donors = TestDataGenerator.CreateDonors(1);
+        donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         donations = new List<Donation__c>();
         donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList2 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
         system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
         
@@ -126,8 +136,8 @@ public class TestBackEndLogic{
         insert bidList2;
         Test.stopTest();
         
-        //Those Bids that were inserted in the second Donation had a higher amount and hence their Amount should reflect
-        //on the Item
+        //Those Bids that were inserted in the second Donation had a higher amount
+        //and hence their Amount should reflect on the Item
 
         //Query All items
         items = new List<Item__c>();
@@ -143,38 +153,38 @@ public class TestBackEndLogic{
         }
         
     }
-    
+
     /**
     Highest Bid is updated on the Item - Competing Bids for Same Item in a single List
     */
-    public static testmethod void itemHighestBidCompeteTest(){
+    public static testmethod void itemHighestBidCompeteBulkTest(){
         
-        //Create 2 Donations each with bids
-        List<Contact> donors = TestDataGenerator.CreateDonors(2);
+        //Create Test Data
+        List<Contact> donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Item__c> items = TestDataGenerator.CreateItems(2000, 4, TRUE);
+        List<Item__c> items = TestDataGenerator.CreateItemsBulk(2000, TRUE);
         insert items;
-        List<Bid__c> bidList = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
-        
-        //Create a third set of Donations and Bids - for the same set of Items
-        List<Contact> competingDonor = TestDataGenerator.CreateDonors(1);
+        List<Bid__c> bidList = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
+        Integer firstBidListSize = bidList.size();
+
+        //Create a second set of Donations and Bids - for the same set of Items
+        List<Contact> competingDonor = TestDataGenerator.CreateDonorsBulk();
         insert competingDonor;
         List<Donation__c> competingDonation = TestDataGenerator.CreateDonations(competingDonor, FALSE);
         insert competingDonation;
         
         //These bids will have the same amounts as the Item's Current Highest Bid
-        List<Bid__c> compBidList = TestDataGenerator.CreateCompetingBids(competingDonation, items, 4);
+        List<Bid__c> compBidList = TestDataGenerator.CreateCompetingBidsBulk(competingDonation, items);
         
+
         //Add all Bids to a single list
         bidList.addAll(compBidList);
         
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList));
+        //system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList));
         
-        //i. Those Bids that were inserted in the first Donation had lower amounts than the second Donation's Bids for the same item
-        //and hence they will fail 
-        //ii. The Bids made under the 3rd Donation had the same Bid Amounts as the second bid - hence, they too will fail
+        //The Bids added in the compBidList had the same Bid Amounts as the bids in the bidList - hence, they will fail
         try{
             Test.startTest();
             insert bidList;
@@ -182,58 +192,59 @@ public class TestBackEndLogic{
         }
         catch(System.DmlException ex){
             system.debug('num errors: ' + ex.getNumDml());
+            system.debug('ex.getMessage(): ' + ex.getMessage());
+
+            System.assert(ex.getNumDml() == compBidList.size());
             
-            System.assert(ex.getNumDml() == 8);
-            
-            for (Integer i = 0; i < 4; i++) {
-                System.assert(ex.getDmlIndex(i) == i);
-            }
-            for(Integer i = 4; i < 8;  i++){
-                System.assert(ex.getDmlIndex(i) == (i+4));
+            for (Integer i = 0; i < compBidList.size(); i++) {
+                System.assert(ex.getDmlIndex(i) == firstBidListSize + i);
             }
             
             System.assert(ex.getMessage().contains(System.Label.HighestBidError));
         }
         
     }
+
     /**
     Highest Bid is updated on the Item - Competing Bids for Same Item in a single List
     */
-    public static testmethod void bidAmountChangeEffectOnItemTest(){
+    public static testmethod void bidAmountChangeEffectOnItemBulkTest(){
         
-        List<Contact> donors = TestDataGenerator.CreateDonors(1);
+        List<Contact> donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Item__c> items = TestDataGenerator.CreateItems(2000, 4, TRUE);
+        List<Item__c> items = TestDataGenerator.CreateItemsBulk(2000, TRUE);
         insert items;
-        List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList1 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
+        //system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
         
         //Create the second set of Donations and Bids
         donors = new List<Contact>();
-        donors = TestDataGenerator.CreateDonors(1);
+        donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         donations = new List<Donation__c>();
         donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList2 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
+        //system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
         
         Test.startTest();
         insert bidList1;
         insert bidList2;
         
-        //Change the Bids in the Second Donation to 0 - this should make the Item's highest bid equal to the Bids of the First Donation
+        //Change the Bids in the Second Donation to 0 -
+        //this should make the Item's highest bid equal to the Bids of the First Donation
         for(Bid__c bid : bidList2){
             bid.Amount__c = 0.00;
         }
         
+        Test.stopTest();
+        
         update bidList2;
         
-        Test.stopTest();
         Integer itemCounter = 0;
         
         //Query items
@@ -251,154 +262,120 @@ public class TestBackEndLogic{
     /**
     When the bid Amount changes - the Total donation value is updated correctly on the related Donation
     */
-    public static testmethod void bidAmountChangeEffectOnDonationTest(){
+    public static testmethod void bidAmountChangeEffectOnDonationBulkTest(){
         
         //Create the First set of Donations and Bids
-        List<Contact> donors = TestDataGenerator.CreateDonors(1);
+        List<Contact> donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Item__c> items = TestDataGenerator.CreateItems(2000, 4, TRUE);
+        List<Item__c> items = TestDataGenerator.CreateItemsBulk(2000, TRUE);
         insert items;
-        List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList1 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
+        //system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
         
         //Create the second set of Donations and Bids
         donors = new List<Contact>();
-        donors = TestDataGenerator.CreateDonors(1);
+        donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         donations = new List<Donation__c>();
         donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList2 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
+        //system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
         
         //insert bids
         Test.startTest();
         insert bidList1;
         insert bidList2;
         
-        //Create a Map of Donation Id > Total Donation
-        List<AggregateResult> donationTotalARList = [SELECT Donation__c, SUM(Amount__c) donationTotal
-                                                     FROM Bid__c
-                                                     GROUP BY Donation__c];
-        
-        Map<Id, Decimal> donationIdTotalMap = new Map<Id, Decimal>();
-        
-        for(AggregateResult donationTotalAR : donationTotalARList){
-            donationIdTotalMap.put((Id)donationTotalAR.get('Donation__c'), (Decimal)donationTotalAR.get('donationTotal'));
-        }
+        //Combine the 2 bid lists
+        bidList2.addAll(bidList1);
 
-        //Query updated Donations
-        Map<Id, Donation__c> updatedDonationMap = new Map<Id, Donation__c>([SELECT Id, Total_Donation__c FROM Donation__c]);
+        //Create a Map of Donation Id > Total Donation from the Bids
+        Map<Id, Decimal> donationTotalMapFromBids = TestDataGenerator.CalculateDonationTotalMapFromBids(bidList2);
+
+        //Create a Map of Donation Id > Total Donation from the Donations
+        Map<Id, Decimal> donationTotalMapFromDonations = TestDataGenerator.CalculateDonationTotalMapFromDonations([SELECT Id, Total_Donation__c FROM Donation__c]);
         
         //Verify that the Totals were updated correctly
-        for(Id updatedDonationId : updatedDonationMap.keySet()){
-            
-            system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
-            
-        }
+        system.assert(TestDataGenerator.CompareMaps(donationTotalMapFromBids, donationTotalMapFromDonations));
         
-        //Query all bids and increase their value
-        List<Bid__c> insertedBids = [SELECT Id, Amount__c FROM Bid__c];
-        
-        //Change the bid Amount values
-        for(Bid__c bid : insertedBids){
+        //Change the bid Amount values for all bids
+        for(Bid__c bid : bidList2){
             bid.Amount__c = bid.Amount__c + 1000;
         }
         
-        //Update Bids
-        update insertedBids;
         Test.stopTest();
-        
-        //Create a fresh Map of Donation Id > Total Donation
 
-        donationTotalARList = [SELECT Donation__c, SUM(Amount__c) donationTotal
-                               FROM Bid__c
-                               GROUP BY Donation__c];
+        //Update Bids
+        update bidList2;
         
-        donationIdTotalMap = new Map<Id, Decimal>();
+        //Create a fresh Map of Donation Id > Total Donation from Bids
+        donationTotalMapFromBids = TestDataGenerator.CalculateDonationTotalMapFromBids(bidList2);
         
-        for(AggregateResult donationTotalAR : donationTotalARList){
-            donationIdTotalMap.put((Id)donationTotalAR.get('Donation__c'), (Decimal)donationTotalAR.get('donationTotal'));
-        }
-        
-        //Fetch updated Donations
-        updatedDonationMap = new Map<Id, Donation__c>([SELECT Id, Total_Donation__c FROM Donation__c]);
-        
-        //Verify that Totals were updated correctly
-        for(Id updatedDonationId : updatedDonationMap.keySet()){
-            
-            system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
-            
-        }
+        //Create a fresh Map of Donation Id > Total Donation from Donations
+        donationTotalMapFromDonations = TestDataGenerator.CalculateDonationTotalMapFromDonations([SELECT Id, Total_Donation__c FROM Donation__c]);
+
+        //Verify that the Totals were updated correctly
+        system.assert(TestDataGenerator.CompareMaps(donationTotalMapFromBids, donationTotalMapFromDonations));
         
     }
-    
+
     /**
     When the Donation Lookup changes - both the old and the New Donations are processed
     */
-    public static testmethod void bidDonationLookupChangeTest(){
+    public static testmethod void bidDonationLookupChangeBulkTest(){
         
         //Create the First set of Donations and Bids
-        List<Contact> donors = TestDataGenerator.CreateDonors(1);
+        List<Contact> donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Item__c> items = TestDataGenerator.CreateItems(2000, 4, TRUE);
+        List<Item__c> items = TestDataGenerator.CreateItemsBulk(2000, TRUE);
         insert items;
-        List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList1 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
+        //system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
         
         //Create the second set of Donations and Bids
         donors = new List<Contact>();
-        donors = TestDataGenerator.CreateDonors(1);
+        donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         donations = new List<Donation__c>();
         donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList2 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
+        //system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
         
         //Insert bids
         Test.startTest();
         insert bidList1;
         insert bidList2;
         
-        //Create a Map of Donation Id > Total Donation
-        List<AggregateResult> donationTotalARList = [SELECT Donation__c, SUM(Amount__c) donationTotal
-                                                     FROM Bid__c
-                                                     GROUP BY Donation__c];
+        //Combine the two Lists
+
+        bidList2.addAll(bidList1);
+
+        //Create a Map of Donation Id > Total Donation From Bids
+        Map<Id, Decimal> donationTotalMapFromBids = TestDataGenerator.CalculateDonationTotalMapFromBids(bidList2);
         
-        Map<Id, Decimal> donationIdTotalMap = new Map<Id, Decimal>();
-        
-        for(AggregateResult donationTotalAR : donationTotalARList){
-            donationIdTotalMap.put((Id)donationTotalAR.get('Donation__c'), (Decimal)donationTotalAR.get('donationTotal'));
-        }
+        //Create a Map of Donation Id > Total Donation From Donations
+        Map<Id, Decimal> donationTotalMapFromDonations = TestDataGenerator.CalculateDonationTotalMapFromDonations([SELECT Id, Total_Donation__c FROM Donation__c]);
         //Query Updated Donations
         List<Donation__c> updatedDonationList = [SELECT Id, Total_Donation__c FROM Donation__c];
-        Map<Id, Donation__c> updatedDonationMap = new Map<Id, Donation__c>(updatedDonationList);
-        
+       
         //Validate that Totals updated correctly
-        for(Id updatedDonationId : updatedDonationMap.keySet()){
-            
-            system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
-            
-        }
-        
-        //Query all bids and increase their value
-        List<Bid__c> insertedBids = [SELECT Id, Amount__c, Donation__c FROM Bid__c];
-        system.debug('inserted bids before random: ' + insertedBids);
+        system.assert(TestDataGenerator.CompareMaps(donationTotalMapFromBids, donationTotalMapFromDonations));
         
         Id randomDonationId;
-        system.debug('updatedDonationList: ' + updatedDonationList);
+        //system.debug('updatedDonationList: ' + updatedDonationList);
         
         //Change the bid Donation lookups
-        for(Bid__c bid : insertedBids){
+        for(Bid__c bid : bidList2){
             Id currentBidDonationId = bid.Donation__c;
             do{
                 randomDonationId = updatedDonationList.get(Integer.valueOf(Math.random()*updatedDonationList.size())).Id;
@@ -406,97 +383,82 @@ public class TestBackEndLogic{
             bid.Donation__c = randomDonationId;
         }
         
-        system.debug('inserted bids after random: ' + insertedBids);
+        //system.debug('inserted bids after random: ' + insertedBids);
         
-        //Update bids
-        update insertedBids;
         Test.stopTest();
-        
-        //Create a fresh Map of Donation Id > Total Donation
 
-        donationTotalARList = [SELECT Donation__c, SUM(Amount__c) donationTotal
-                               FROM Bid__c
-                               GROUP BY Donation__c];
+        //Update bids
+        update bidList2;
         
+        //Create a fresh Map of Donation Id > Total Donation from Bids
+        donationTotalMapFromBids = new Map<Id, Decimal>();
+    
         //Set Default Total Donation = 0 for all Donations
-        donationIdTotalMap = new Map<Id, Decimal>();
-
         for(Donation__c donation : updatedDonationList){
-            donationIdTotalMap.put(donation.Id, 0);
+            donationTotalMapFromBids.put(donation.Id, 0);
         }
         
-        for(AggregateResult donationTotalAR : donationTotalARList){
-            donationIdTotalMap.put((Id)donationTotalAR.get('Donation__c'), (Decimal)donationTotalAR.get('donationTotal'));
-        }
+        donationTotalMapFromBids.putAll(TestDataGenerator.CalculateDonationTotalMapFromBids(bidList2));
         
-        //Query Donations
-        updatedDonationMap = new Map<Id, Donation__c>([SELECT Id, Total_Donation__c FROM Donation__c]);
-        
+        //Create a fresh Map of Donation Id > Total Donation from Donations
+        donationTotalMapFromDonations = new Map<Id, Decimal>();
+
+        donationTotalMapFromDonations =  TestDataGenerator.CalculateDonationTotalMapFromDonations([SELECT Id, Total_Donation__c FROM Donation__c]);
         //Validate that the Totals updated correctly on All donations
-        for(Id updatedDonationId : updatedDonationMap.keySet()){
-            
-            system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
-            
-        }
+        system.assert(TestDataGenerator.CompareMaps(donationTotalMapFromDonations, donationTotalMapFromBids));
         
     }
-    
+
     /**
     When the Item Lookup changes - both the old and the New Items are processed
     */
-    public static testmethod void bidItemLookupChangeTest(){
+    public static testmethod void bidItemLookupChangeBulkTest(){
         
         //Create the First set of Donations and Bids
-        List<Contact> donors = TestDataGenerator.CreateDonors(1);
+        List<Contact> donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Item__c> items = TestDataGenerator.CreateItems(2000, 4, TRUE);
+        List<Item__c> items = TestDataGenerator.CreateItemsBulk(2000, TRUE);
         insert items;
-        List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList1 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
+        //system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
         
         //Create the second set of Donations and Bids
         donors = new List<Contact>();
-        donors = TestDataGenerator.CreateDonors(1);
+        donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         donations = new List<Donation__c>();
         donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList2 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
+        //system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
         
         //insert bids
         Test.startTest();
         insert bidList1;
         insert bidList2;
         
-        //Create a Map of Item Id > Highest Bid
-        List<AggregateResult> itemHighestBidARList = [SELECT Item__c, MAX(Amount__c) itemHighestBid
-                                                      FROM Bid__c
-                                                      GROUP BY Item__c];
-        
-        Map<Id, Decimal> itemIdHighestBidMap = new Map<Id, Decimal>();
-        
-        for(AggregateResult itemHighestBid : itemHighestBidARList){
-            itemIdHighestBidMap.put((Id)itemHighestBid.get('Item__c'), (Decimal)itemHighestBid.get('itemHighestBid'));
-        }
-        //Query items
-        List<Item__c> updatedItemList = [SELECT Id, Highest_Bid__c FROM Item__c];
+        //Combine the 2 Lists
 
-        Map<Id, Item__c> updatedItemMap = new Map<Id, Item__c>(updatedItemList);
+        bidList2.addAll(bidList1);
+
+        List<Item__c> updatedItemList = [SELECT Id, Highest_Bid__c FROM Item__c];
+        
+        //Create a Map of Item Id > Highest Bid from Bids
+        Map<Id, Decimal> itemIdHighestBidMapFromBids = new Map<Id, Decimal>();
+
+        itemIdHighestBidMapFromBids = TestDataGenerator.CalculateItemHighestBidMapFromBids(bidList2);
+
+        //Create a Map of Item Id > Highest Bid from Items
+        Map<Id, Decimal> itemIdHighestBidMapFromItems = TestDataGenerator.CalculateItemHighestBidMapFromItems([SELECT Id, Highest_Bid__c FROM Item__c]);
         
         //Verify that the Highest Amount updated correctly
-        for(Id updatedItemId : updatedItemMap.keySet()){
-            
-            system.assert(updatedItemMap.get(updatedItemId).Highest_Bid__c == itemIdHighestBidMap.get(updatedItemId));
-            
-        }
-        
-        bidList2.addAll(bidList1);
-        system.debug('inserted bids before random: ' + bidList2);
+        system.assert(TestDataGenerator.CompareMaps(itemIdHighestBidMapFromBids, itemIdHighestBidMapFromItems));
+
+        //system.debug('inserted bids before random: ' + bidList2);
         
         Id randomItemId;
         system.debug('updatedItemList: ' + updatedItemList);
@@ -510,109 +472,78 @@ public class TestBackEndLogic{
             bid.Item__c = randomItemId;
         }
         
-        system.debug('inserted bids after random: ' + bidList2);
+        //system.debug('inserted bids after random: ' + bidList2);
+        
+        Test.stopTest();
         
         //Update bids
         update bidList2;
-        Test.stopTest();
         
-        //Create a fresh Map of Item Id > Highest Bid
-        itemHighestBidARList = [SELECT Item__c, MAX(Amount__c) itemHighestBid
-                                FROM Bid__c
-                                GROUP BY Item__c];
-        
-        itemIdHighestBidMap = new Map<Id, Decimal>();
-        
+        //Create a fresh Map of Item Id > Highest Bid from Bids
+        itemIdHighestBidMapFromBids = new Map<Id, Decimal>();
+
         //Set Default Highest Bid = NULL for all Items
         for(Item__c item: updatedItemList){
-            itemIdHighestBidMap.put(item.Id, NULL);
+            itemIdHighestBidMapFromBids.put(item.Id, NULL);
         }
 
-        for(AggregateResult itemHighestBidAR : itemHighestBidARList){
-            itemIdHighestBidMap.put((Id)itemHighestBidAR.get('Item__c'), (Decimal)itemHighestBidAR.get('itemHighestBid'));
-        }
+        itemIdHighestBidMapFromBids.putAll(TestDataGenerator.CalculateItemHighestBidMapFromBids(bidList2));
         
-        system.debug('itemIdHighestBidMap: ' + itemIdHighestBidMap);
+        //Create a fresh Map of Item Id > Highest Bid from Items
 
-        //Get updated set of Items
-        updatedItemMap = new Map<Id, Item__c>([SELECT Id, Highest_Bid__c FROM Item__c]);
-        
-        system.debug('updatedItemMap: ' + updatedItemMap);
+        itemIdHighestBidMapFromItems = new Map<Id, Decimal>();
+
+        itemIdHighestBidMapFromItems = TestDataGenerator.CalculateItemHighestBidMapFromItems([SELECT Id, Highest_Bid__c FROM Item__c]);
 
         //Verify that the Highest Bid updated on all Items correctly
-        for(Id updatedItemId : updatedItemMap.keySet()){
-            
-            system.assert(updatedItemMap.get(updatedItemId).Highest_Bid__c == itemIdHighestBidMap.get(updatedItemId));
-            
-        }
+        TestDataGenerator.CompareMaps(itemIdHighestBidMapFromItems, itemIdHighestBidMapFromBids);
     }
-    
+
     /**
     The Item updates in response to Deletion and Undeletion of bids
     */
-    public static testmethod void bidDeleteUndeleteEffectOnItemTest(){
+    public static testmethod void bidDeleteUndeleteEffectOnItemBulkTest(){
         
         //Create the First set of Donations and Bids
-        List<Contact> donors = TestDataGenerator.CreateDonors(1);
+        List<Contact> donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Item__c> items = TestDataGenerator.CreateItems(2000, 4, TRUE);
+        List<Item__c> items = TestDataGenerator.CreateItemsBulk(2000, TRUE);
         insert items;
-        List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList1 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
-        
-        //Create the second set of Donations and Bids
-        donors = new List<Contact>();
-        donors = TestDataGenerator.CreateDonors(1);
-        insert donors;
-        donations = new List<Donation__c>();
-        donations = TestDataGenerator.CreateDonations(donors, FALSE);
-        insert donations;
-        List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
-        
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
+        //system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
         
         //insert bids
         Test.startTest();
         insert bidList1;
-        insert bidList2;
         
-        //Create a Map of Item Id > Highest Bid
-        List<AggregateResult> itemHighestBidARList = [SELECT Item__c, MAX(Amount__c) itemHighestBid
-                                                      FROM Bid__c
-                                                      GROUP BY Item__c];
+        //Create a Map of Item Id > Highest Bid from Bids
+        Map<Id, Decimal> itemIdHighestBidMapFromBids = new Map<Id, Decimal>();
+
+        itemIdHighestBidMapFromBids = TestDataGenerator.CalculateItemHighestBidMapFromBids(bidList1);
         
-        Map<Id, Decimal> itemIdHighestBidMap = new Map<Id, Decimal>();
-        
-        for(AggregateResult itemHighestBidAR : itemHighestBidARList){
-            itemIdHighestBidMap.put((Id)itemHighestBidAR.get('Item__c'), (Decimal)itemHighestBidAR.get('itemHighestBid'));
-        }
-        //Query the items
+        //Create a Map of Item Id > Highest Bid from Items
         List<Item__c> updatedItemList = [SELECT Id, Highest_Bid__c FROM Item__c];
-        Map<Id, Item__c> updatedItemMap = new Map<Id, Item__c>(updatedItemList);
         
+        Map<Id, Decimal> itemIdHighestBidMapFromItems = TestDataGenerator.CalculateItemHighestBidMapFromItems([SELECT Id, Highest_Bid__c FROM Item__c]);
         //Verify that the Highest Bid updated correctly
-        for(Id updatedItemId : updatedItemMap.keySet()){
-            
-            system.assert(updatedItemMap.get(updatedItemId).Highest_Bid__c == itemIdHighestBidMap.get(updatedItemId));
-            
-        }
+        system.assert(TestDataGenerator.CompareMaps(itemIdHighestBidMapFromBids, itemIdHighestBidMapFromItems));
         
         //Query all bids and delete them
         List<Bid__c> bidsToDelete = [SELECT Id FROM Bid__c];
-        system.debug('bidsToDelete: ' + bidsToDelete);
+        //system.debug('bidsToDelete: ' + bidsToDelete);
+        
+        Test.stopTest();
         
         //Delete bids
         delete bidsToDelete;
         
-        Test.stopTest();
-        
         //Query items
         items = [SELECT Highest_Bid__c FROM Item__c];
         
-        //The Highest Bid on All items has been updated to NULL
+        //The Highest Bid on All items has been updated to NULL as a result of the deletion
         for(Item__c item : items){
             system.assert(item.Highest_Bid__c == NULL);
         }
@@ -621,83 +552,57 @@ public class TestBackEndLogic{
         List<Bid__c> restoredBids = [SELECT Id FROM Bid__c Where IsDeleted = TRUE ALL ROWS];
         undelete restoredBids;
         
-        //Query items
-        updatedItemList = [SELECT Id, Highest_Bid__c FROM Item__c];
-        updatedItemMap = new Map<Id, Item__c>(updatedItemList);
+        //Create a fresh Map of Item Id > Highest Bid from Items
+        itemIdHighestBidMapFromItems = TestDataGenerator.CalculateItemHighestBidMapFromItems([SELECT Id, Highest_Bid__c FROM Item__c]);
         
         //The Original Highest Bid values have been updated on the Items
-        for(Id updatedItemId : updatedItemMap.keySet()){
-            system.assert(updatedItemMap.get(updatedItemId).Highest_Bid__c == itemIdHighestBidMap.get(updatedItemId));
-        }
+        system.assert(TestDataGenerator.CompareMaps(itemIdHighestBidMapFromBids, itemIdHighestBidMapFromItems));
         
     }
+    
     /**
     The Donation updates in response to Deletion and Undeletion of bids
     */
-    public static testmethod void bidDeleteUndeleteEffectOnDonationTest(){
+
+    public static testmethod void bidDeleteUndeleteEffectOnDonationBulkTest(){
         
         //Create the First set of Donations and Bids
-        List<Contact> donors = TestDataGenerator.CreateDonors(1);
+        List<Contact> donors = TestDataGenerator.CreateDonorsBulk();
         insert donors;
         List<Donation__c> donations = TestDataGenerator.CreateDonations(donors, FALSE);
         insert donations;
-        List<Item__c> items = TestDataGenerator.CreateItems(2000, 4, TRUE);
+        List<Item__c> items = TestDataGenerator.CreateItemsBulk(2000, TRUE);
         insert items;
-        List<Bid__c> bidList1 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
+        List<Bid__c> bidList1 = TestDataGenerator.CreateBidsBulk(donations, items, TRUE);
         
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
+        //system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList1));
         
-        //Create the second set of Donations and Bids
-        donors = new List<Contact>();
-        donors = TestDataGenerator.CreateDonors(1);
-        insert donors;
-        donations = new List<Donation__c>();
-        donations = TestDataGenerator.CreateDonations(donors, FALSE);
-        insert donations;
-        List<Bid__c> bidList2 = TestDataGenerator.CreateBids(donations, items, 4, TRUE);
-        
-        system.debug('Serialized output: ' + TestDataGenerator.SerializeObjects(donors, donations, items, bidList2));
-        
-        //insert bids
         Test.startTest();
         insert bidList1;
-        insert bidList2;
+      
+        //Create a Map of Donation Id > Total Donation from Bids
+        Map<Id, Decimal> donationIdTotalMapFromBids = new Map<Id, Decimal>();
         
-        //Create a Map of Donation Id > Total Donation
-        List<AggregateResult> donationTotalARList = [SELECT Donation__c, SUM(Amount__c) donationTotal
-                                                     FROM Bid__c
-                                                     GROUP BY Donation__c];
+        donationIdTotalMapFromBids = TestDataGenerator.CalculateDonationTotalMapFromBids(bidList1);
         
-        Map<Id, Decimal> donationIdTotalMap = new Map<Id, Decimal>();
-        
-        for(AggregateResult donationTotalAR : donationTotalARList){
-            donationIdTotalMap.put((Id)donationTotalAR.get('Donation__c'), (Decimal)donationTotalAR.get('donationTotal'));
-        }
-        //Query donations
-        List<Donation__c> updatedDonationList = [SELECT Id, Total_Donation__c FROM Donation__c];
-
-        Map<Id, Donation__c> updatedDonationMap = new Map<Id, Donation__c>(updatedDonationList);
-        
+        //Create a Map of Donation Id > Total Donation from Donations
+        Map<Id, Decimal> donationIdTotalMapFromDonations = TestDataGenerator.CalculateDonationTotalMapFromDonations([SELECT Id, Total_Donation__c FROM Donation__c]);
         //Verify that the Total Donation updated correctly
-        for(Id updatedDonationId : updatedDonationMap.keySet()){
-            
-            system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
-            
-        }
+        system.assert(TestDataGenerator.CompareMaps(donationIdTotalMapFromBids, donationIdTotalMapFromDonations));
         
         //Query all bids and delete them
         List<Bid__c> bidsToDelete = [SELECT Id, Amount__c, Donation__c FROM Bid__c];
-        system.debug('bidsToDelete: ' + bidsToDelete);
+        //system.debug('bidsToDelete: ' + bidsToDelete);
+        
+        Test.stopTest();
         
         //Delete bids
         delete bidsToDelete;
         
-        Test.stopTest();
-        
         //Requery donations
         donations = [SELECT Total_Donation__c FROM Donation__c];
         
-        //The Total Donation amounts have been cleared
+        //The Total Donation amounts have been cleared as a result of the deletion
         for(Donation__c donation : donations){
             system.assert(donation.Total_Donation__c == 0);
         }
@@ -706,15 +611,11 @@ public class TestBackEndLogic{
         List<Bid__c> restoredBids = [SELECT Id FROM Bid__c Where IsDeleted = TRUE ALL ROWS];
         undelete restoredBids;
         
-        updatedDonationList = [SELECT Id, Total_Donation__c FROM Donation__c];
-        updatedDonationMap = new Map<Id, Donation__c>(updatedDonationList);
+        //Create a fresh Map of Donation Id > Total Donation from Donations
+        donationIdTotalMapFromDonations = TestDataGenerator.CalculateDonationTotalMapFromDonations([SELECT Id, Total_Donation__c FROM Donation__c]);
         
         //The Total Donation amounts have been restored
-        for(Id updatedDonationId : updatedDonationMap.keySet()){
-            system.assert(updatedDonationMap.get(updatedDonationId).Total_Donation__c == donationIdTotalMap.get(updatedDonationId));
-        }
+        TestDataGenerator.CompareMaps(donationIdTotalMapFromBids, donationIdTotalMapFromDonations);
         
     }
-    
-    
 }

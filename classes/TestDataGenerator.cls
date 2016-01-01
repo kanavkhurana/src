@@ -1,6 +1,7 @@
 /**
 Purpose:
 This class functions as a Data Factory that is called by the other test methods
+This class also has certain utility methods that are called by the other test classes
 */
 @isTest
 public class TestDataGenerator{
@@ -14,20 +15,17 @@ public class TestDataGenerator{
     //Internal count of users
     public static Integer userCount = 0;
     
-    //Query the testVolume__c Custom setting to fetch data volumes to be created
-    public static TestVolume__c testVolume{
-        get{
-            if(testVolume == NULL){
+    /**
+    Data volumes to be used for the test class 'TestBackEndLogic'
+    are specified in the numberOfDonations and numberOfBidsPerDonation final variables
+    */
+    
+    //Tested Value for bulk operations = 20
+    //Reduced to 2 for ease of deployment
+    private static final Integer numberOfDonations = 2;
+    
+    private static final Integer numberOfBidsPerDonation = 50;
 
-                testVolume = [SELECT NoOfBidsPerDonation__c, NoOfDonations__c, NoOfDonors__c, NoOfItems__c
-                FROM TestVolume__c
-                WHERE Name = 'TestVolume'
-                LIMIT 1];
-            }
-            return testVolume;
-        }
-        set;
-    }
     //Query User Profiles
     public static Map<String, Id> profileMap{
         get{
@@ -66,6 +64,19 @@ public class TestDataGenerator{
 
         return donors;
     }
+    //Util method for Donor Creation in Bulk
+    public static List<Contact> CreateDonorsBulk(){
+
+        List<Contact> donors = new List<Contact>();
+
+        //Loop through number of Donors
+        for(Integer i = 0; i < numberOfDonations ; i++ ){
+
+            donors.add(new Contact(FirstName = 'Test', LastName = 'User ' + i));
+        }
+
+        return donors;
+    }
 
     //Util method for Donation Creation
     //Pass a list of donors and this method creates 1 donation per donor
@@ -94,8 +105,9 @@ public class TestDataGenerator{
      @param noOfBidsPerDonation - the number of bids to be created for each donation
      @param bidsValid - Boolean that specified whether the created bids are valid, ie, is the Bid Amount > Item's Minimum Bid or not
      
-     The Logic creates the Bids under the Donations with the Items taken from the items list - in order
-     Also, subsequent bids for the same item are created in increments of USD 1000
+     i. The Logic creates the Bids under the Donations with the Items taken from the items list - in order
+     ii. Also, subsequent bids for the same item are created in increments of USD 1000
+     iii. It's important to remember that the list that is returned WILL NOT CONTAIN more than 1 bid for the same item
     */
     public static List<Bid__c> CreateBids(List<Donation__c> donations, List<Item__c> items, Integer noOfBidsPerDonation,
                                           Boolean bidsValid){
@@ -138,6 +150,58 @@ public class TestDataGenerator{
         return bids;
     }
     /**
+     Util method for Bid Creation in Bulk
+
+     @param donations - list of existing donations
+     @param items - list of existing items
+     @param bidsValid - Boolean that specified whether the created bids are valid, ie, is the Bid Amount > Item's Minimum Bid or not
+     
+     i. The Logic creates the Bids under the Donations with the Items taken from the items listin order
+     ii. Also, subsequent bids for the same item are created in increments of USD 1000
+     iii. Number of Items created is assumed to be = numberOfBidsPerDonation * numberOfDonations
+     iv. It's important to remember that the list that is returned WILL NOT CONTAIN more than 1 bid for the same item
+    */
+    public static List<Bid__c> CreateBidsBulk(List<Donation__c> donations, List<Item__c> items, Boolean bidsValid){
+
+        List<Bid__c> bids = new List<Bid__c>();
+
+        if(TestDataGenerator.itemIdHighestBidMap == NULL){
+            TestDataGenerator.itemIdHighestBidMap = new Map<Id, Decimal>();
+        }
+
+        Integer totalNumberOfBids = numberOfBidsPerDonation * donations.size();
+        
+        for(Integer bidCounter = 0; bidCounter < totalNumberOfBids ; bidCounter++){
+
+            Item__c relatedItem = items.get(Math.mod(bidCounter,items.size()));
+
+            Bid__c bid = new Bid__c(Item__c = relatedItem.Id,
+                                Donation__c = donations.get(bidCounter / numberOfBidsPerDonation).Id
+                                );
+         if(bidsValid){
+            
+            //Ensure that the amount chosen is greater than the Related Item's Minimum Bid
+            if(TestDataGenerator.itemIdHighestBidMap.containsKey(bid.Item__c)){
+                bid.Amount__c = TestDataGenerator.itemIdHighestBidMap.get(bid.Item__c) + 1000;
+                TestDataGenerator.itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
+            }
+            else{
+                bid.Amount__c = relatedItem.Minimum_Bid__c + 1000;
+                TestDataGenerator.itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
+            }
+
+            }
+            else{
+                //Reduce the amount by USD 1000 from the Related Item's Minimum Bid to make it invalid
+                bid.Amount__c = relatedItem.Minimum_Bid__c - 1000;
+            } 
+                bids.add(bid);
+            }
+
+        return bids;
+    }
+
+    /**
      Util method for Competing Bid Creation
 
      @param donations - list of existing donations
@@ -171,112 +235,137 @@ public class TestDataGenerator{
         return bids;
 
     }
-    /// ????? //
-    /*public static List<Bid__c> CreateBidsBulk(List<Id> donationIds, List<Id> itemIds){
-       
+     /**
+     Util method for Competing Bid Creation in Bulk
 
+     @param donations - list of existing donations
+     @param items - list of existing items
+     
+     The Logic creates the Bids under the Donations with the Items taken from the items list - in order -
+     and assigns the Amount to match the Highest Bid for an item
+    */
+    public static List<Bid__c> CreateCompetingBidsBulk(List<Donation__c> donations, List<Item__c> items){
+         
         List<Bid__c> bids = new List<Bid__c>();
-        TestDataGenerator.itemIdHighestBidMap = new Map<Id, Decimal>();
-
-        //Integer bidCounter = Integer.valueOf(Math.min(testVolume.NoOfBidsPerDonation__c,testVolume.NoOfItems__c)); 
-        //Integer donationCounter = 0;
-        Integer countInvalidBids = 0 ;
-        Integer totalNumberOfBids = Integer.valueOf(testVolume.NoOfBidsPerDonation__c * testVolume.NoOfDonations__c);
-        Integer bidCounter;
-        for(bidCounter = 0; bidCounter < totalNumberOfBids ; bidCounter++){
-
-            Bid__c bid = new Bid__c(Item__c = itemIds.get(Math.mod(bidCounter,Integer.valueof(testVolume.NoOfItems__c))),
-                                Donation__c = donationIds.get(bidCounter / Integer.valueOf(testVolume.NoOfBidsPerDonation__c))
-                                );
-            Item__c relatedItem = itemMap.get(bid.Item__c);
-
-            //if(countInvalidBids == noOfInvalidBids){
-            
-            //Ensure that the amount chosen is greater than the Related Item's Minimum Bid
-            if(TestDataGenerator.itemIdHighestBidMap.containsKey(bid.Item__c)){
-                bid.Amount__c = TestDataGenerator.itemIdHighestBidMap.get(bid.Item__c) + 1000;
-                //Is this correct??
-                //numberOfBidsLessThanHighestBid++ ;
-            }
-            else{
-                bid.Amount__c = relatedItem.Minimum_Bid__c + 1000;
-                TestDataGenerator.itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
-            }
-
-            //}
-            //else{
-                //Reduce the amount by USD 1000 from the Related Item's Minimum Bid to make it invalid
-                //bid.Amount__c = relatedItem.Minimum_Bid__c - 1000;
-                //countInvalidBids++;
-            //}
-
-            bids.add(bid);
-        }
        
-        List<Bid__c> successfulBids = new List<Bid__c>();
+        Integer totalNumberOfBids = numberOfBidsPerDonation * donations.size();
+        
+        for(Integer bidCounter = 0; bidCounter < totalNumberOfBids ; bidCounter++){
 
-        //Calculate Utility Maps that will be used for assertion
-        //KK: To be created as separate functions in the test class
-         successfulBids = CalculateItemIdHighestBidMap(bids);
-        //No. of successful bids = Initial bids - numberofInvalidBids - numberOfBidsLessThanHighestBid
+            Item__c relatedItem = items.get(Math.mod(bidCounter,items.size()));
 
-        //CalculateSuccessfulBids(bids);     
-        CalculateDonationIdTotalMap(successfulBids);
+            Bid__c bid = new Bid__c(Item__c = relatedItem.Id,
+                                Donation__c = donations.get(bidCounter / numberOfBidsPerDonation).Id
+                                );
+            
+            //Ensure that the amount chosen is equal to the Related Item's Highest Bid
+            if(TestDataGenerator.itemIdHighestBidMap.containsKey(bid.Item__c)){
+                bid.Amount__c = TestDataGenerator.itemIdHighestBidMap.get(bid.Item__c);
+            }
+                bids.add(bid);
+            }
 
-        insert bids;
         return bids;
 
     }
+    
+    /**
+     Util method for Item Highest Bid Map Creation from Bids
+
+     @param bids - list of bids to process     
     */
+    public static Map<Id, Decimal> CalculateItemHighestBidMapFromBids(List<Bid__c> bids){
 
-    // ?????  ////
-    /* 
-    public static List<Bid__c> CalculateItemIdHighestBidMap(List<Bid__c> bids){
+        Map<Id, Decimal> itemHighestBidMapFromBids = new Map<Id, Decimal>();
 
-    TestDataGenerator.itemIdHighestBidMap = new Map<Id, Decimal>();
-    List<Bid__c> successfulBids = new List<Bid__c>();
-    Set<Id> itemIdsCovered = new Set<Id>();
-
-    for(Bid__c bid : bids){
-            if(TestDataGenerator.itemIdHighestBidMap.containsKey(bid.Item__c)){
-                Decimal highestBidAmount = TestDataGenerator.itemIdHighestBidMap.get(bid.Item__c);
-                if(bid.Amount__c > highestBidAmount){
-                    TestDataGenerator.itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
-                    //numberOfBidsLessThanHighestBid++;
+        for(Bid__c bid : bids){
+            if(itemHighestBidMapFromBids.containsKey(bid.Item__c)){
+                Decimal highestBid = itemHighestBidMapFromBids.get(bid.Item__c);
+                if(bid.Amount__c > highestBid){
+                    itemHighestBidMapFromBids.put(bid.Item__c, bid.Amount__c);
                 }
+            }
+            else{
+                itemHighestBidMapFromBids.put(bid.Item__c, bid.Amount__c);
             }
         }
-    
-        for(Bid__c bid : bids){
-                Decimal highestBidForItem = TestDataGenerator.itemIdHighestBidMap.get(bid.Item__c);
-                if(bid.Amount__c < highestBidForItem){
-                    //itemIdHighestBidMap.put(bid.Item__c, bid.Amount__c);
-                    numberOfBidsLessThanHighestBid++;
-                }
-                else if(bid.Amount__c == highestBidForItem){
-                    if(!itemIdsCovered.contains(bid.Item__c)){
-                        successfulBids.add(bid);
-                    }
-                }
-            }
 
-        return successfulBids;
+        return itemIdHighestBidMap;
+    
+    }
+
+    /**
+     Util method for Item Highest Bid Map Creation from Items
+
+     @param items - list of items to process     
+    */
+    public static Map<Id, Decimal> CalculateItemHighestBidMapFromItems(List<Item__c> items){
+
+     Map<Id, Decimal> itemHighestBidMapFromItems = new Map<Id, Decimal>();
+
+        for(Item__c item : items){
+            itemHighestBidMapFromItems.put(item.Id, item.Highest_Bid__c);
+        }
+
+        return itemHighestBidMapFromItems;
+
     }
     
-    //These should only be the bids that were successfully inserted
-    public static void CalculateDonationIdTotalMap(List<Bid__c> bids){
+    /**
+     Util method for Donation Total Map Creation from Bids
 
-        donationIdTotalMap = new Map<Id, Decimal>();
+     @param bids - list of bids to process     
+    */
+    public static Map<Id, Decimal> CalculateDonationTotalMapFromBids(List<Bid__c> bids){
+
+        Map<Id, Decimal> donationTotalMap = new Map<Id, Decimal>();
 
         for(Bid__c bid : bids){
-            if(donationIdTotalMap.containsKey(bid.Donation__c)){
-                Decimal totalDonation = donationIdTotalMap.get(bid.Donation__c);
+            if(donationTotalMap.containsKey(bid.Donation__c)){
+                Decimal totalDonation = donationTotalMap.get(bid.Donation__c);
                 totalDonation += bid.Amount__c;
-                donationIdTotalMap.put(bid.Donation__c, totalDonation);
+                donationTotalMap.put(bid.Donation__c, totalDonation);
+            }
+            else{
+                donationTotalMap.put(bid.Donation__c, bid.Amount__c);
             }
         }
+
+        return donationTotalMap;
     }
+
+    /**
+     Util method for Donation Total Map Creation from Donations
+
+     @param donations - list of donations to process     
     */
+    public static Map<Id, Decimal> CalculateDonationTotalMapFromDonations(List<Donation__c> donations){
+
+        Map<Id, Decimal> donationTotalMap = new Map<Id, Decimal>();
+
+        for(Donation__c donation : donations){
+            donationTotalMap.put(donation.Id, donation.Total_Donation__c);
+        }
+
+        return donationTotalMap;
+    }
+    /**
+     Util method for Donation Total Map and Item Highest Bid Map Comparison
+
+     @param map1, map2 - maps to compare
+     @return Boolean - True - if totals/Highest Bids are matching, false otherwise  
+     @assumption - both maps are of same size  
+    */
+    public static Boolean CompareMaps(Map<Id, Decimal> map1, Map<Id, Decimal> map2){
+
+        for(Id id : map1.keySet()){
+            if(map1.get(id) != map2.get(id)){
+                return FALSE;
+            }
+        }
+
+        return TRUE;
+    }
 
     /**
      Util method for Item Creation
@@ -314,6 +403,42 @@ public class TestDataGenerator{
     }
 
     /**
+     Util method for Item Creation in Bulk
+
+     @param upperLimitForMinimumBid - is the upper limit for the Minimum Bid Value
+     @param futureClosingDate - Boolean which specifies whether the Closing Date is a future date or not
+
+     i. The logic uses a default Lower limit of 1000 for the Minimum Bid value
+     ii. The total number of items created = numberOfDonations * numberOfBidsPerDonation, 
+         and hence, It's important to remember that the list of bids created as a result of 'CreateBidsBulk'
+         WILL NOT CONTAIN more than 1 bid for the same item
+    */
+
+    public static List<Item__c> CreateItemsBulk(Integer upperLimitForMinimumBid, Boolean futureClosingDate){
+
+        List<Item__c> items = new List<Item__c>();
+        itemMap = new Map<Id, Item__c>();
+
+        for(Integer i = 0; i < numberOfDonations * numberOfBidsPerDonation ; i++){
+
+            //Choosing Categories from Cat 1 - Cat 10
+            Item__c item = new Item__c(Name = 'Item ' + i, 
+                                  Category__c = 'Cat ' + (Math.round(Math.random()*9)  + 1),
+                                Minimum_Bid__c = Math.round(Math.random()*upperLimitForMinimumBid) + 1000);
+            
+            if(futureClosingDate){
+                item.Closing_Date__c = Date.today().addDays(10);
+            }
+            else{
+                item.Closing_Date__c = Date.today().addDays(-10);
+            }
+            items.add(item);
+        }
+
+        return items;
+    }
+
+    /**
      Alternate Util method for a single Item Creation
 
      @param minimumBid - Minimum Bid
@@ -326,35 +451,6 @@ public class TestDataGenerator{
                                    Minimum_Bid__c = minimumBid);
         return item;
     }
-
-    // ????? //
-    /*public static List<Item__c> CreateItemsBulk(Integer upperLimitForMinimumBid){
-
-        List<Item__c> items = new List<Item__c>();
-        itemMap = new Map<Id, Item__c>();
-
-        for(Integer i = 0; i < testVolume.NoOfItems__c ; i++){
-
-            //Choosing Categories from Cat 1 - Cat 10
-            items.add(new Item__c(Name = 'Item ' + i, 
-                                  Category__c = 'Cat ' + (Math.round(Math.random()*9)  + 1),
-                                  //Closing_Date__c = Date.today().addDays(Math.round(Math.random()*366)),
-                                  Closing_Date__c = Date.today().addDays(10),
-                                  Minimum_Bid__c = Math.round(Math.random()*upperLimitForMinimumBid) + 1000
-                                  ));
-
-        }
-
-        insert items;
-
-        //Item Map populated
-        for(Item__c item : items){
-            itemMap.put(item.Id, item);
-        }
-
-        return items;
-    }
-    */
 
     /**
      Util method for User Creation
