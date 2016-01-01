@@ -1,6 +1,6 @@
 /**
- Purpose: 
- Controller for the DonationWizard Visualforce Page
+Purpose: 
+Controller for the DonationWizard Visualforce Page
 */
 public with sharing class DonationWizardController
 {
@@ -24,7 +24,7 @@ public with sharing class DonationWizardController
     public Set<String> itemCategories{get;set;}
     //Category Picklist value
     public String selectedCategory{get;set;}
-
+    
     //List of Item to query
     transient public List<Item__c> itemList{get;set;}
     //Pie Data 
@@ -51,82 +51,91 @@ public with sharing class DonationWizardController
         Set<Id> itemIdsAlreadyQueried = new Set<Id>();
         /*************************/
         
-        //If Existing Donation
-        if(sc.getId() != null){
+        //Cover the possibility of the 'FOR UPDATE' query throwing a Locking exception
+        try{
             
-            //Secure Lock on Donation
-            donation = [SELECT Name, Donor__c, Status__c
-                        FROM Donation__c
-                        WHERE Id =: sc.getId()
+            //If Existing Donation
+            if(sc.getId() != null){
+                
+                //Secure Lock on Donation
+                donation = [SELECT Name, Donor__c, Status__c
+                            FROM Donation__c
+                            WHERE Id =: sc.getId()
+                            FOR UPDATE];
+                
+                //Fetch All Bids under this Donation
+                List<Bid__c> bids = [SELECT Id, Amount__c, Item__c, Item__r.Name, Item__r.Minimum_Bid__c,
+                                     Item__r.Highest_Bid__c, Item__r.Category__c, Item__r.Closing_Date__c 
+                                     FROM Bid__c
+                                     WHERE Donation__c =: sc.getId()
+                                     FOR UPDATE];
+                
+                //Add to completeWrapperList
+                //Add to itemCategories
+                //Add to itemIdsAlreadyQueried - don't want to query same items in a subsequent query
+                for(Bid__c bid : bids)
+                {
+                    BidWithItemsWrapper bwi = new BidWithItemsWrapper(bid,bid.Item__r);
+                    completeWrapperList.add(bwi);
+                    if(!String.isBlank(bid.Item__r.Category__c)){
+                        itemCategories.add(bid.Item__r.Category__c);
+                    }
+                    itemIdsAlreadyQueried.add(bid.Item__c);
+                }
+                
+                newPage = FALSE;
+            }
+            //If New Donation
+            else{
+                
+                donation = new Donation__c();
+                //Fetch Donor Id if invoked from Contact Related List
+                donation = (Donation__c)sc.getRecord();
+                
+                newPage = TRUE;
+            }
+            
+            //Fetch Items with Close Date >= Today
+            //Excluding items that have already been added above
+            itemList = [SELECT Name, Minimum_Bid__c, Highest_Bid__c, Category__c, Closing_Date__c
+                        FROM Item__c
+                        WHERE Closing_Date__c >=: Date.today()
+                        AND Id NOT IN: itemIdsAlreadyQueried
                         FOR UPDATE];
-
-            //Fetch All Bids under this Donation
-            List<Bid__c> bids = [SELECT Id, Amount__c, Item__c, Item__r.Name, Item__r.Minimum_Bid__c,
-                                 Item__r.Highest_Bid__c, Item__r.Category__c, Item__r.Closing_Date__c 
-                                 FROM Bid__c
-                                 WHERE Donation__c =: sc.getId()
-                                 FOR UPDATE];
+            
+            system.debug('itemlist size: ' + itemList.size());
             
             //Add to completeWrapperList
             //Add to itemCategories
-            //Add to itemIdsAlreadyQueried - don't want to query same items in a subsequent query
-            for(Bid__c bid : bids)
+            for(Item__c item : itemList )
             {
-                BidWithItemsWrapper bwi = new BidWithItemsWrapper(bid,bid.Item__r);
+                BidWithItemsWrapper bwi = new BidWithItemsWrapper(new Bid__c(Amount__c = 0.00),item);
                 completeWrapperList.add(bwi);
-                if(!String.isBlank(bid.Item__r.Category__c)){
-                    itemCategories.add(bid.Item__r.Category__c);
+                if(!String.isBlank(item.Category__c)){
+                    itemCategories.add(item.Category__c);
                 }
-                itemIdsAlreadyQueried.add(bid.Item__c);
+                
             }
             
-            newPage = FALSE;
-        }
-        //If New Donation
-        else{
+            system.debug('ready to sort');
             
-            donation = new Donation__c();
-            //Fetch Donor Id if invoked from Contact Related List
-            donation = (Donation__c)sc.getRecord();
+            //Sorting to be done on the basis of Minimum Bid - custom sort() implemented in Wrapper 
+            completeWrapperList.sort();
             
-            newPage = TRUE;
-        }
-        
-        //Fetch Items with Close Date >= Today
-        //Excluding items that have already been added above
-        itemList = [SELECT Name, Minimum_Bid__c, Highest_Bid__c, Category__c, Closing_Date__c
-                    FROM Item__c
-                    WHERE Closing_Date__c >=: Date.today()
-                    AND Id NOT IN: itemIdsAlreadyQueried
-                    FOR UPDATE];
-        
-        system.debug('itemlist size: ' + itemList.size());
-        
-        //Add to completeWrapperList
-        //Add to itemCategories
-        for(Item__c item : itemList )
-        {
-            BidWithItemsWrapper bwi = new BidWithItemsWrapper(new Bid__c(Amount__c = 0.00),item);
-            completeWrapperList.add(bwi);
-            if(!String.isBlank(item.Category__c)){
-                itemCategories.add(item.Category__c);
-            }
+            system.debug('completeWrapperList size: ' + completeWrapperList.size());
             
+            //Initialize the paginatingIterator
+            page = new PaginatingIterator (completeWrapperList); 
+            
+            system.debug('Calling next');
+            //Call the next() method to initialize Page 1
+            next();
         }
-    
-        system.debug('ready to sort');
-        
-        //Sorting to be done on the basis of Minimum Bid - custom sort() implemented in Wrapper 
-        completeWrapperList.sort();
-        
-        system.debug('completeWrapperList size: ' + completeWrapperList.size());
-        
-        //Initialize the paginatingIterator
-        page = new PaginatingIterator (completeWrapperList); 
-        
-        system.debug('Calling next');
-        //Call the next() method to initialize Page 1
-        next();
+        //Catch the Lock exception 
+        catch(Exception ex){
+            //Display on the interface
+            ApexPages.addMessage(new ApexPages.message(ApexPages.severity.ERROR, ex.getMessage()));
+        }
         
     }
     
@@ -136,7 +145,7 @@ public with sharing class DonationWizardController
     public Integer getTotalNumberOfPages(){
         return Integer.valueOf(page.getTotalNumberOfPages());
     }
-
+    
     //Returns the filtered Wrapper List
     public List<BidWithItemsWrapper> getFilteredWrapperList(){
         return page.filteredWrapperList;
@@ -162,7 +171,7 @@ public with sharing class DonationWizardController
         }
         return options;
     }
-
+    
     //Pagination control methods
     /**************************/
     public Boolean isNotFirst {
@@ -197,7 +206,7 @@ public with sharing class DonationWizardController
         set;
     }
     /****************************/
-
+    
     //Pagination methods
     /***************************/
     public PageReference first() 
@@ -358,7 +367,7 @@ public with sharing class DonationWizardController
         return null;
         
     }
-
+    
     //Action method called from the 'Save' button
     public PageReference customSave()
     {
